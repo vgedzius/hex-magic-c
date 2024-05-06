@@ -1,4 +1,4 @@
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 struct Vector
 {
@@ -104,7 +104,9 @@ int main(int, char **)
     }
 
     int width = 1200;
-    int height = 800;
+    int height = 1000;
+
+    HexMetrics metrics;
 
     SDL_Window *window = SDL_CreateWindow(
         "Hex Magic",
@@ -140,8 +142,8 @@ int main(int, char **)
     {
         for (int x = 0; x < grid.width; x++)
         {
-            cell->pos.x = x * 100.0f;
-            cell->pos.y = y * 100.0f;
+            cell->pos.x = (x + y * 0.5f - y / 2) * metrics.innerRadius * 2.0f;
+            cell->pos.y = y * metrics.outerRadius * 1.5f;
 
             cell++;
         }
@@ -175,15 +177,21 @@ int main(int, char **)
             {
                 for (int x = 0; x < grid.width; x++)
                 {
-                    SDL_Rect rect;
-
-                    rect.x = cell->pos.x;
-                    rect.y = cell->pos.y;
-                    rect.w = 100.0f;
-                    rect.h = 100.0f;
-
                     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                    SDL_RenderDrawRect(renderer, &rect);
+
+                    Vector v0 = cell->pos + metrics.corners[0];
+                    Vector v1 = cell->pos + metrics.corners[1];
+                    Vector v2 = cell->pos + metrics.corners[2];
+                    Vector v3 = cell->pos + metrics.corners[3];
+                    Vector v4 = cell->pos + metrics.corners[4];
+                    Vector v5 = cell->pos + metrics.corners[5];
+
+                    SDL_RenderDrawLine(renderer, v0.x, v0.y, v1.x, v1.y);
+                    SDL_RenderDrawLine(renderer, v1.x, v1.y, v2.x, v2.y);
+                    SDL_RenderDrawLine(renderer, v2.x, v2.y, v3.x, v3.y);
+                    SDL_RenderDrawLine(renderer, v3.x, v3.y, v4.x, v4.y);
+                    SDL_RenderDrawLine(renderer, v4.x, v4.y, v5.x, v5.y);
+                    SDL_RenderDrawLine(renderer, v5.x, v5.y, v0.x, v0.y);
 
                     cell++;
                 }
