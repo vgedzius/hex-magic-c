@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 
 struct Vector
 {
@@ -130,6 +131,17 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
+    const char *fontPath = "assets/fonts/montserrat/Montserrat-Regular.ttf";
+
+    TTF_Init();
+    TTF_Font *font = TTF_OpenFont(fontPath, 96);
+
+    if (font == NULL)
+    {
+        printf("Font not found: %s\n", fontPath);
+        return EXIT_FAILURE;
+    }
+
     bool isRunning = true;
 
     Grid grid;
@@ -172,6 +184,10 @@ int main(int, char **)
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
 
+            Vector cellOffset = {100, 100};
+            Vector labelOffset = {-35, -35};
+            SDL_Color labelColor = {155, 155, 155};
+
             Cell *cell = grid.cells;
             for (int y = 0; y < grid.height; y++)
             {
@@ -179,12 +195,12 @@ int main(int, char **)
                 {
                     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-                    Vector v0 = cell->pos + metrics.corners[0];
-                    Vector v1 = cell->pos + metrics.corners[1];
-                    Vector v2 = cell->pos + metrics.corners[2];
-                    Vector v3 = cell->pos + metrics.corners[3];
-                    Vector v4 = cell->pos + metrics.corners[4];
-                    Vector v5 = cell->pos + metrics.corners[5];
+                    Vector v0 = cell->pos + metrics.corners[0] + cellOffset;
+                    Vector v1 = cell->pos + metrics.corners[1] + cellOffset;
+                    Vector v2 = cell->pos + metrics.corners[2] + cellOffset;
+                    Vector v3 = cell->pos + metrics.corners[3] + cellOffset;
+                    Vector v4 = cell->pos + metrics.corners[4] + cellOffset;
+                    Vector v5 = cell->pos + metrics.corners[5] + cellOffset;
 
                     SDL_RenderDrawLine(renderer, v0.x, v0.y, v1.x, v1.y);
                     SDL_RenderDrawLine(renderer, v1.x, v1.y, v2.x, v2.y);
@@ -192,6 +208,20 @@ int main(int, char **)
                     SDL_RenderDrawLine(renderer, v3.x, v3.y, v4.x, v4.y);
                     SDL_RenderDrawLine(renderer, v4.x, v4.y, v5.x, v5.y);
                     SDL_RenderDrawLine(renderer, v5.x, v5.y, v0.x, v0.y);
+
+                    char labelText[22];
+                    sprintf(labelText, "%i %i", x, y);
+
+                    SDL_Surface *surfaceLabel = TTF_RenderUTF8_Blended(font, labelText, labelColor);
+                    SDL_Texture *label = SDL_CreateTextureFromSurface(renderer, surfaceLabel);
+
+                    SDL_Rect labelRect;
+                    labelRect.x = cell->pos.x + cellOffset.x + labelOffset.x;
+                    labelRect.y = cell->pos.y + cellOffset.y + labelOffset.y;
+                    labelRect.w = 75;
+                    labelRect.h = 75;
+
+                    SDL_RenderCopy(renderer, label, NULL, &labelRect);
 
                     cell++;
                 }
@@ -203,6 +233,7 @@ int main(int, char **)
 
     free(grid.cells);
 
+    TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
