@@ -91,7 +91,8 @@ struct HexCoord
 struct CoordLabel
 {
     SDL_Texture *label;
-    SDL_Rect rect;
+    int width;
+    int height;
 };
 
 struct CellUI
@@ -140,21 +141,15 @@ char *IntToString(int coord)
     return buffer;
 }
 
-CoordLabel CreateCoordLabel(SDL_Renderer *renderer, int coord, Vector pos, TTF_Font *font, SDL_Color color)
+CoordLabel CreateCoordLabel(SDL_Renderer *renderer, int coord, TTF_Font *font, SDL_Color color)
 {
-    char *labelText = IntToString(coord);
-    int width, height;
     CoordLabel result;
+    char *labelText = IntToString(coord);
 
     SDL_Surface *surface = TTF_RenderUTF8_Blended(font, labelText, color);
     result.label = SDL_CreateTextureFromSurface(renderer, surface);
 
-    TTF_SizeUTF8(font, labelText, &width, &height);
-
-    result.rect.x = pos.x;
-    result.rect.y = pos.y;
-    result.rect.w = width;
-    result.rect.h = height;
+    TTF_SizeUTF8(font, labelText, &result.width, &result.height);
 
     free(labelText);
 
@@ -167,24 +162,9 @@ void InitCellUI(SDL_Renderer *renderer, Cell *cell, TTF_Font *font)
     SDL_Color ylabelColor = {0, 255, 0};
     SDL_Color zlabelColor = {0, 0, 255};
 
-    Vector xLabelPos = {-60, -25};
-    Vector yLabelPos = {15, -65};
-    Vector zLabelPos = {5, 15};
-
-    Vector xPos = cell->pos + xLabelPos;
-    Vector yPos = cell->pos + yLabelPos;
-    Vector zPos = cell->pos + zLabelPos;
-
-    cell->ui.xLabel = CreateCoordLabel(renderer, cell->coord.x, xPos, font, xlabelColor);
-    cell->ui.yLabel = CreateCoordLabel(renderer, cell->coord.y, yPos, font, ylabelColor);
-    cell->ui.zLabel = CreateCoordLabel(renderer, cell->coord.z, zPos, font, zlabelColor);
-}
-
-void RenderCellUI(SDL_Renderer *renderer, Cell *cell)
-{
-    SDL_RenderCopy(renderer, cell->ui.xLabel.label, NULL, &cell->ui.xLabel.rect);
-    SDL_RenderCopy(renderer, cell->ui.yLabel.label, NULL, &cell->ui.yLabel.rect);
-    SDL_RenderCopy(renderer, cell->ui.zLabel.label, NULL, &cell->ui.zLabel.rect);
+    cell->ui.xLabel = CreateCoordLabel(renderer, cell->coord.x, font, xlabelColor);
+    cell->ui.yLabel = CreateCoordLabel(renderer, cell->coord.y, font, ylabelColor);
+    cell->ui.zLabel = CreateCoordLabel(renderer, cell->coord.z, font, zlabelColor);
 }
 
 int main(int, char **)
@@ -239,9 +219,16 @@ int main(int, char **)
 
     Vector gridPos = {100, 100};
 
+    Vector cameraPos = {500, 300};
+    float cameraSpeed = 100.0f;
+
+    Vector xLabelPos = {-60, -25};
+    Vector yLabelPos = {15, -65};
+    Vector zLabelPos = {5, 15};
+
     Grid grid;
-    grid.width = 6;
-    grid.height = 6;
+    grid.width = 56;
+    grid.height = 16;
     grid.cells = (Cell *)malloc(grid.width * grid.height * sizeof(Cell));
 
     Cell *cell = grid.cells;
@@ -285,6 +272,30 @@ int main(int, char **)
                 {
                     showCoords = !showCoords;
                 }
+
+                if (key == SDLK_RIGHT)
+                {
+                    Vector delta = {-cameraSpeed, 0};
+                    cameraPos += delta;
+                }
+
+                if (key == SDLK_LEFT)
+                {
+                    Vector delta = {cameraSpeed, 0};
+                    cameraPos += delta;
+                }
+
+                if (key == SDLK_UP)
+                {
+                    Vector delta = {0, cameraSpeed};
+                    cameraPos += delta;
+                }
+
+                if (key == SDLK_DOWN)
+                {
+                    Vector delta = {0, -cameraSpeed};
+                    cameraPos += delta;
+                }
             }
 
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -295,12 +306,12 @@ int main(int, char **)
             {
                 for (int x = 0; x < grid.width; x++)
                 {
-                    Vector v0 = cell->pos + metrics.corners[0];
-                    Vector v1 = cell->pos + metrics.corners[1];
-                    Vector v2 = cell->pos + metrics.corners[2];
-                    Vector v3 = cell->pos + metrics.corners[3];
-                    Vector v4 = cell->pos + metrics.corners[4];
-                    Vector v5 = cell->pos + metrics.corners[5];
+                    Vector v0 = cell->pos + metrics.corners[0] + cameraPos;
+                    Vector v1 = cell->pos + metrics.corners[1] + cameraPos;
+                    Vector v2 = cell->pos + metrics.corners[2] + cameraPos;
+                    Vector v3 = cell->pos + metrics.corners[3] + cameraPos;
+                    Vector v4 = cell->pos + metrics.corners[4] + cameraPos;
+                    Vector v5 = cell->pos + metrics.corners[5] + cameraPos;
 
                     Sint16 vx[6] = {(Sint16)v0.x, (Sint16)v1.x, (Sint16)v2.x, (Sint16)v3.x, (Sint16)v4.x, (Sint16)v5.x};
                     Sint16 vy[6] = {(Sint16)v0.y, (Sint16)v1.y, (Sint16)v2.y, (Sint16)v3.y, (Sint16)v4.y, (Sint16)v5.y};
@@ -319,7 +330,21 @@ int main(int, char **)
 
                     if (showCoords)
                     {
-                        RenderCellUI(renderer, cell);
+                        Vector xPos = cell->pos + xLabelPos + cameraPos;
+                        Vector yPos = cell->pos + yLabelPos + cameraPos;
+                        Vector zPos = cell->pos + zLabelPos + cameraPos;
+
+                        CoordLabel xLabel = cell->ui.xLabel;
+                        CoordLabel yLabel = cell->ui.yLabel;
+                        CoordLabel zLabel = cell->ui.zLabel;
+
+                        SDL_Rect xRect = {(int)xPos.x, (int)xPos.y, xLabel.width, xLabel.height};
+                        SDL_Rect yRect = {(int)yPos.x, (int)yPos.y, yLabel.width, yLabel.height};
+                        SDL_Rect zRect = {(int)zPos.x, (int)zPos.y, zLabel.width, zLabel.height};
+
+                        SDL_RenderCopy(renderer, xLabel.label, NULL, &xRect);
+                        SDL_RenderCopy(renderer, yLabel.label, NULL, &yRect);
+                        SDL_RenderCopy(renderer, zLabel.label, NULL, &zRect);
                     }
 
                     cell++;
