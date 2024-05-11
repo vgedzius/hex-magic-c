@@ -321,12 +321,12 @@ int main(int, char **)
 
                     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-                    SDL_RenderDrawLine(renderer, v0.x, v0.y, v1.x, v1.y);
-                    SDL_RenderDrawLine(renderer, v1.x, v1.y, v2.x, v2.y);
-                    SDL_RenderDrawLine(renderer, v2.x, v2.y, v3.x, v3.y);
-                    SDL_RenderDrawLine(renderer, v3.x, v3.y, v4.x, v4.y);
-                    SDL_RenderDrawLine(renderer, v4.x, v4.y, v5.x, v5.y);
-                    SDL_RenderDrawLine(renderer, v5.x, v5.y, v0.x, v0.y);
+                    SDL_RenderDrawLineF(renderer, v0.x, v0.y, v1.x, v1.y);
+                    SDL_RenderDrawLineF(renderer, v1.x, v1.y, v2.x, v2.y);
+                    SDL_RenderDrawLineF(renderer, v2.x, v2.y, v3.x, v3.y);
+                    SDL_RenderDrawLineF(renderer, v3.x, v3.y, v4.x, v4.y);
+                    SDL_RenderDrawLineF(renderer, v4.x, v4.y, v5.x, v5.y);
+                    SDL_RenderDrawLineF(renderer, v5.x, v5.y, v0.x, v0.y);
 
                     if (showCoords)
                     {
