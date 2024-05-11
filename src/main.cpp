@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 struct Vector
 {
@@ -91,6 +92,7 @@ struct Cell
 {
     Vector pos;
     HexCoord coord;
+    SDL_Color color;
 };
 
 struct Grid
@@ -219,6 +221,7 @@ int main(int, char **)
 
             cell->pos = pos + gridPos;
             cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
+            cell->color = {127, 127, 127, 255};
 
             cell++;
         }
@@ -257,14 +260,20 @@ int main(int, char **)
             {
                 for (int x = 0; x < grid.width; x++)
                 {
-                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
                     Vector v0 = cell->pos + metrics.corners[0];
                     Vector v1 = cell->pos + metrics.corners[1];
                     Vector v2 = cell->pos + metrics.corners[2];
                     Vector v3 = cell->pos + metrics.corners[3];
                     Vector v4 = cell->pos + metrics.corners[4];
                     Vector v5 = cell->pos + metrics.corners[5];
+
+                    Sint16 vx[6] = {(Sint16)v0.x, (Sint16)v1.x, (Sint16)v2.x, (Sint16)v3.x, (Sint16)v4.x, (Sint16)v5.x};
+                    Sint16 vy[6] = {(Sint16)v0.y, (Sint16)v1.y, (Sint16)v2.y, (Sint16)v3.y, (Sint16)v4.y, (Sint16)v5.y};
+
+                    filledPolygonRGBA(renderer, vx, vy, 6,
+                                      cell->color.r, cell->color.g, cell->color.b, cell->color.a);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
                     SDL_RenderDrawLine(renderer, v0.x, v0.y, v1.x, v1.y);
                     SDL_RenderDrawLine(renderer, v1.x, v1.y, v2.x, v2.y);
@@ -275,13 +284,13 @@ int main(int, char **)
 
                     if (showCoords)
                     {
-                        Vector xLabelPos = cell->pos + xLabelPos;
-                        Vector yLabelPos = cell->pos + yLabelPos;
-                        Vector zLabelPos = cell->pos + zLabelPos;
+                        Vector xPos = cell->pos + xLabelPos;
+                        Vector yPos = cell->pos + yLabelPos;
+                        Vector zPos = cell->pos + zLabelPos;
 
-                        RenderCellCoordLabel(renderer, cell->coord.x, xLabelPos, font, xlabelColor);
-                        RenderCellCoordLabel(renderer, cell->coord.y, yLabelPos, font, ylabelColor);
-                        RenderCellCoordLabel(renderer, cell->coord.z, zLabelPos, font, zlabelColor);
+                        RenderCellCoordLabel(renderer, cell->coord.x, xPos, font, xlabelColor);
+                        RenderCellCoordLabel(renderer, cell->coord.y, yPos, font, ylabelColor);
+                        RenderCellCoordLabel(renderer, cell->coord.z, zPos, font, zlabelColor);
                     }
 
                     cell++;
