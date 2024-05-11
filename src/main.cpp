@@ -101,7 +101,7 @@ struct Grid
     Cell *cells;
 };
 
-HexCoord FromOffsetCoords(int x, int y)
+HexCoord HexCoordFromOffsetCoord(int x, int y)
 {
     HexCoord result;
 
@@ -194,6 +194,16 @@ int main(int, char **)
     bool isRunning = true;
     bool showCoords = true;
 
+    Vector gridPos = {100, 100};
+
+    Vector xLabelPos = {-60, -25};
+    Vector yLabelPos = {15, -65};
+    Vector zLabelPos = {5, 15};
+
+    SDL_Color xlabelColor = {255, 0, 0};
+    SDL_Color ylabelColor = {0, 255, 0};
+    SDL_Color zlabelColor = {0, 0, 255};
+
     Grid grid;
     grid.width = 6;
     grid.height = 6;
@@ -204,9 +214,11 @@ int main(int, char **)
     {
         for (int x = 0; x < grid.width; x++)
         {
-            cell->pos.x = (x + y * 0.5f - y / 2) * metrics.innerRadius * 2.0f;
-            cell->pos.y = y * metrics.outerRadius * 1.5f;
-            cell->coord = FromOffsetCoords(x - y / 2, y);
+            Vector pos = {(x + y * 0.5f - y / 2) * metrics.innerRadius * 2.0f,
+                          y * metrics.outerRadius * 1.5f};
+
+            cell->pos = pos + gridPos;
+            cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
 
             cell++;
         }
@@ -240,16 +252,6 @@ int main(int, char **)
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
 
-            Vector cellOffset = {100, 100};
-
-            Vector xLabelOffset = {-60, -25};
-            Vector yLabelOffset = {15, -65};
-            Vector zLabelOffset = {5, 15};
-
-            SDL_Color xlabelColor = {255, 0, 0};
-            SDL_Color ylabelColor = {0, 255, 0};
-            SDL_Color zlabelColor = {0, 0, 255};
-
             Cell *cell = grid.cells;
             for (int y = 0; y < grid.height; y++)
             {
@@ -257,12 +259,12 @@ int main(int, char **)
                 {
                     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-                    Vector v0 = cell->pos + metrics.corners[0] + cellOffset;
-                    Vector v1 = cell->pos + metrics.corners[1] + cellOffset;
-                    Vector v2 = cell->pos + metrics.corners[2] + cellOffset;
-                    Vector v3 = cell->pos + metrics.corners[3] + cellOffset;
-                    Vector v4 = cell->pos + metrics.corners[4] + cellOffset;
-                    Vector v5 = cell->pos + metrics.corners[5] + cellOffset;
+                    Vector v0 = cell->pos + metrics.corners[0];
+                    Vector v1 = cell->pos + metrics.corners[1];
+                    Vector v2 = cell->pos + metrics.corners[2];
+                    Vector v3 = cell->pos + metrics.corners[3];
+                    Vector v4 = cell->pos + metrics.corners[4];
+                    Vector v5 = cell->pos + metrics.corners[5];
 
                     SDL_RenderDrawLine(renderer, v0.x, v0.y, v1.x, v1.y);
                     SDL_RenderDrawLine(renderer, v1.x, v1.y, v2.x, v2.y);
@@ -273,9 +275,9 @@ int main(int, char **)
 
                     if (showCoords)
                     {
-                        Vector xLabelPos = cell->pos + cellOffset + xLabelOffset;
-                        Vector yLabelPos = cell->pos + cellOffset + yLabelOffset;
-                        Vector zLabelPos = cell->pos + cellOffset + zLabelOffset;
+                        Vector xLabelPos = cell->pos + xLabelPos;
+                        Vector yLabelPos = cell->pos + yLabelPos;
+                        Vector zLabelPos = cell->pos + zLabelPos;
 
                         RenderCellCoordLabel(renderer, cell->coord.x, xLabelPos, font, xlabelColor);
                         RenderCellCoordLabel(renderer, cell->coord.y, yLabelPos, font, ylabelColor);
