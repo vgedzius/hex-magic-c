@@ -192,6 +192,7 @@ int main(int, char **)
     }
 
     bool isRunning = true;
+    bool showCoords = true;
 
     Grid grid;
     grid.width = 6;
@@ -229,6 +230,11 @@ int main(int, char **)
                 {
                     isRunning = false;
                 }
+
+                if (key == SDLK_c)
+                {
+                    showCoords = !showCoords;
+                }
             }
 
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -265,13 +271,16 @@ int main(int, char **)
                     SDL_RenderDrawLine(renderer, v4.x, v4.y, v5.x, v5.y);
                     SDL_RenderDrawLine(renderer, v5.x, v5.y, v0.x, v0.y);
 
-                    Vector xLabelPos = cell->pos + cellOffset + xLabelOffset;
-                    Vector yLabelPos = cell->pos + cellOffset + yLabelOffset;
-                    Vector zLabelPos = cell->pos + cellOffset + zLabelOffset;
+                    if (showCoords)
+                    {
+                        Vector xLabelPos = cell->pos + cellOffset + xLabelOffset;
+                        Vector yLabelPos = cell->pos + cellOffset + yLabelOffset;
+                        Vector zLabelPos = cell->pos + cellOffset + zLabelOffset;
 
-                    RenderCellCoordLabel(renderer, cell->coord.x, xLabelPos, font, xlabelColor);
-                    RenderCellCoordLabel(renderer, cell->coord.y, yLabelPos, font, ylabelColor);
-                    RenderCellCoordLabel(renderer, cell->coord.z, zLabelPos, font, zlabelColor);
+                        RenderCellCoordLabel(renderer, cell->coord.x, xLabelPos, font, xlabelColor);
+                        RenderCellCoordLabel(renderer, cell->coord.y, yLabelPos, font, ylabelColor);
+                        RenderCellCoordLabel(renderer, cell->coord.z, zLabelPos, font, zlabelColor);
+                    }
 
                     cell++;
                 }
