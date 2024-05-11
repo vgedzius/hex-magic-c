@@ -112,7 +112,7 @@ HexCoord FromOffsetCoords(int x, int y)
     return result;
 }
 
-char *CellLabel(int coord)
+char *IntToString(int coord)
 {
     const char *format = "%i";
 
@@ -122,6 +122,26 @@ char *CellLabel(int coord)
     sprintf(buffer, format, coord);
 
     return buffer;
+}
+
+void RenderCellCoordLabel(SDL_Renderer *renderer, int coord, Vector pos, TTF_Font *font, SDL_Color color)
+{
+    char *labelText = IntToString(coord);
+    int width, height;
+    SDL_Rect rect;
+
+    SDL_Surface *surfaceLabel = TTF_RenderUTF8_Blended(font, labelText, color);
+    SDL_Texture *label = SDL_CreateTextureFromSurface(renderer, surfaceLabel);
+    TTF_SizeUTF8(font, labelText, &width, &height);
+
+    rect.x = pos.x;
+    rect.y = pos.y;
+    rect.w = width;
+    rect.h = height;
+
+    SDL_RenderCopy(renderer, label, NULL, &rect);
+
+    free(labelText);
 }
 
 int main(int, char **)
@@ -245,53 +265,13 @@ int main(int, char **)
                     SDL_RenderDrawLine(renderer, v4.x, v4.y, v5.x, v5.y);
                     SDL_RenderDrawLine(renderer, v5.x, v5.y, v0.x, v0.y);
 
-                    char *xLabelText = CellLabel(cell->coord.x);
-                    int xW, xH;
-                    SDL_Surface *xSurfaceLabel = TTF_RenderUTF8_Blended(font, xLabelText, xlabelColor);
-                    SDL_Texture *xLabel = SDL_CreateTextureFromSurface(renderer, xSurfaceLabel);
-                    TTF_SizeUTF8(font, xLabelText, &xW, &xH);
+                    Vector xLabelPos = cell->pos + cellOffset + xLabelOffset;
+                    Vector yLabelPos = cell->pos + cellOffset + yLabelOffset;
+                    Vector zLabelPos = cell->pos + cellOffset + zLabelOffset;
 
-                    SDL_Rect xLabelRect;
-                    xLabelRect.x = cell->pos.x + cellOffset.x + xLabelOffset.x;
-                    xLabelRect.y = cell->pos.y + cellOffset.y + xLabelOffset.y;
-                    xLabelRect.w = xW;
-                    xLabelRect.h = xH;
-
-                    SDL_RenderCopy(renderer, xLabel, NULL, &xLabelRect);
-
-                    free(xLabelText);
-
-                    char *yLabelText = CellLabel(cell->coord.y);
-                    int yW, yH;
-                    SDL_Surface *ySurfaceLabel = TTF_RenderUTF8_Blended(font, yLabelText, ylabelColor);
-                    SDL_Texture *yLabel = SDL_CreateTextureFromSurface(renderer, ySurfaceLabel);
-                    TTF_SizeUTF8(font, yLabelText, &yW, &yH);
-
-                    SDL_Rect yLabelRect;
-                    yLabelRect.x = cell->pos.x + cellOffset.x + yLabelOffset.x;
-                    yLabelRect.y = cell->pos.y + cellOffset.y + yLabelOffset.y;
-                    yLabelRect.w = yW;
-                    yLabelRect.h = yH;
-
-                    SDL_RenderCopy(renderer, yLabel, NULL, &yLabelRect);
-
-                    free(yLabelText);
-
-                    char *zLabelText = CellLabel(cell->coord.z);
-                    int zW, zH;
-                    SDL_Surface *zSurfaceLabel = TTF_RenderUTF8_Blended(font, zLabelText, zlabelColor);
-                    SDL_Texture *zLabel = SDL_CreateTextureFromSurface(renderer, zSurfaceLabel);
-                    TTF_SizeUTF8(font, zLabelText, &zW, &zH);
-
-                    SDL_Rect zLabelRect;
-                    zLabelRect.x = cell->pos.x + cellOffset.x + zLabelOffset.x;
-                    zLabelRect.y = cell->pos.y + cellOffset.y + zLabelOffset.y;
-                    zLabelRect.w = zW;
-                    zLabelRect.h = zH;
-
-                    SDL_RenderCopy(renderer, zLabel, NULL, &zLabelRect);
-
-                    free(zLabelText);
+                    RenderCellCoordLabel(renderer, cell->coord.x, xLabelPos, font, xlabelColor);
+                    RenderCellCoordLabel(renderer, cell->coord.y, yLabelPos, font, ylabelColor);
+                    RenderCellCoordLabel(renderer, cell->coord.z, zLabelPos, font, zlabelColor);
 
                     cell++;
                 }
