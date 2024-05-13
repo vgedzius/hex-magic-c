@@ -118,6 +118,11 @@ struct Grid
     Cell *cells;
 };
 
+struct GameInput
+{
+    Vector arrow;
+};
+
 HexCoord HexCoordFromOffsetCoord(int x, int y)
 {
     HexCoord result;
@@ -252,6 +257,7 @@ int main(int, char **)
     while (isRunning)
     {
         SDL_Event event = {0};
+
         while (SDL_PollEvent(&event))
         {
             if (event.type == SDL_QUIT)
@@ -272,31 +278,38 @@ int main(int, char **)
                 {
                     showCoords = !showCoords;
                 }
+            }
+
+            GameInput input = {0};
+
+            if (event.type == SDL_KEYDOWN)
+            {
+                SDL_Keycode key = event.key.keysym.sym;
 
                 if (key == SDLK_RIGHT)
                 {
-                    Vector delta = {-cameraSpeed, 0};
-                    cameraPos += delta;
+                    input.arrow.x = 1.0f;
                 }
 
                 if (key == SDLK_LEFT)
                 {
-                    Vector delta = {cameraSpeed, 0};
-                    cameraPos += delta;
+                    input.arrow.x = -1.0f;
                 }
 
                 if (key == SDLK_UP)
                 {
-                    Vector delta = {0, cameraSpeed};
-                    cameraPos += delta;
+                    input.arrow.y = 1.0f;
                 }
 
                 if (key == SDLK_DOWN)
                 {
-                    Vector delta = {0, -cameraSpeed};
-                    cameraPos += delta;
+                    input.arrow.y = -1.0f;
                 }
             }
+
+            Vector cameraDir = input.arrow * cameraSpeed;
+            cameraDir.x *= -1.0f;
+            cameraPos += cameraDir;
 
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
