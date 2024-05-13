@@ -219,6 +219,9 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
+    Uint64 now = 0;
+    Uint64 lastFrame = 0;
+
     bool isRunning = true;
     bool showCoords = true;
 
@@ -257,6 +260,7 @@ int main(int, char **)
     while (isRunning)
     {
         SDL_Event event = {0};
+        GameInput input = {0};
 
         while (SDL_PollEvent(&event))
         {
@@ -279,8 +283,6 @@ int main(int, char **)
                     showCoords = !showCoords;
                 }
             }
-
-            GameInput input = {0};
 
             if (event.type == SDL_KEYDOWN)
             {
@@ -306,66 +308,74 @@ int main(int, char **)
                     input.arrow.y = -1.0f;
                 }
             }
-
-            Vector cameraDir = input.arrow * cameraSpeed;
-            cameraDir.x *= -1.0f;
-            cameraPos += cameraDir;
-
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-
-            Cell *cell = grid.cells;
-            for (int y = 0; y < grid.height; y++)
-            {
-                for (int x = 0; x < grid.width; x++)
-                {
-                    Vector v0 = cell->pos + metrics.corners[0] + cameraPos;
-                    Vector v1 = cell->pos + metrics.corners[1] + cameraPos;
-                    Vector v2 = cell->pos + metrics.corners[2] + cameraPos;
-                    Vector v3 = cell->pos + metrics.corners[3] + cameraPos;
-                    Vector v4 = cell->pos + metrics.corners[4] + cameraPos;
-                    Vector v5 = cell->pos + metrics.corners[5] + cameraPos;
-
-                    Sint16 vx[6] = {(Sint16)v0.x, (Sint16)v1.x, (Sint16)v2.x, (Sint16)v3.x, (Sint16)v4.x, (Sint16)v5.x};
-                    Sint16 vy[6] = {(Sint16)v0.y, (Sint16)v1.y, (Sint16)v2.y, (Sint16)v3.y, (Sint16)v4.y, (Sint16)v5.y};
-
-                    filledPolygonRGBA(renderer, vx, vy, 6,
-                                      cell->color.r, cell->color.g, cell->color.b, cell->color.a);
-
-                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-                    SDL_RenderDrawLineF(renderer, v0.x, v0.y, v1.x, v1.y);
-                    SDL_RenderDrawLineF(renderer, v1.x, v1.y, v2.x, v2.y);
-                    SDL_RenderDrawLineF(renderer, v2.x, v2.y, v3.x, v3.y);
-                    SDL_RenderDrawLineF(renderer, v3.x, v3.y, v4.x, v4.y);
-                    SDL_RenderDrawLineF(renderer, v4.x, v4.y, v5.x, v5.y);
-                    SDL_RenderDrawLineF(renderer, v5.x, v5.y, v0.x, v0.y);
-
-                    if (showCoords)
-                    {
-                        Vector xPos = cell->pos + xLabelPos + cameraPos;
-                        Vector yPos = cell->pos + yLabelPos + cameraPos;
-                        Vector zPos = cell->pos + zLabelPos + cameraPos;
-
-                        CoordLabel xLabel = cell->ui.xLabel;
-                        CoordLabel yLabel = cell->ui.yLabel;
-                        CoordLabel zLabel = cell->ui.zLabel;
-
-                        SDL_Rect xRect = {(int)xPos.x, (int)xPos.y, xLabel.width, xLabel.height};
-                        SDL_Rect yRect = {(int)yPos.x, (int)yPos.y, yLabel.width, yLabel.height};
-                        SDL_Rect zRect = {(int)zPos.x, (int)zPos.y, zLabel.width, zLabel.height};
-
-                        SDL_RenderCopy(renderer, xLabel.label, NULL, &xRect);
-                        SDL_RenderCopy(renderer, yLabel.label, NULL, &yRect);
-                        SDL_RenderCopy(renderer, zLabel.label, NULL, &zRect);
-                    }
-
-                    cell++;
-                }
-            }
-
-            SDL_RenderPresent(renderer);
         }
+
+        Vector cameraDir = input.arrow * cameraSpeed;
+        cameraDir.x *= -1.0f;
+        cameraPos += cameraDir;
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
+        Cell *cell = grid.cells;
+        for (int y = 0; y < grid.height; y++)
+        {
+            for (int x = 0; x < grid.width; x++)
+            {
+                Vector v0 = cell->pos + metrics.corners[0] + cameraPos;
+                Vector v1 = cell->pos + metrics.corners[1] + cameraPos;
+                Vector v2 = cell->pos + metrics.corners[2] + cameraPos;
+                Vector v3 = cell->pos + metrics.corners[3] + cameraPos;
+                Vector v4 = cell->pos + metrics.corners[4] + cameraPos;
+                Vector v5 = cell->pos + metrics.corners[5] + cameraPos;
+
+                Sint16 vx[6] = {(Sint16)v0.x, (Sint16)v1.x, (Sint16)v2.x, (Sint16)v3.x, (Sint16)v4.x, (Sint16)v5.x};
+                Sint16 vy[6] = {(Sint16)v0.y, (Sint16)v1.y, (Sint16)v2.y, (Sint16)v3.y, (Sint16)v4.y, (Sint16)v5.y};
+
+                filledPolygonRGBA(renderer, vx, vy, 6,
+                                  cell->color.r, cell->color.g, cell->color.b, cell->color.a);
+
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+                SDL_RenderDrawLineF(renderer, v0.x, v0.y, v1.x, v1.y);
+                SDL_RenderDrawLineF(renderer, v1.x, v1.y, v2.x, v2.y);
+                SDL_RenderDrawLineF(renderer, v2.x, v2.y, v3.x, v3.y);
+                SDL_RenderDrawLineF(renderer, v3.x, v3.y, v4.x, v4.y);
+                SDL_RenderDrawLineF(renderer, v4.x, v4.y, v5.x, v5.y);
+                SDL_RenderDrawLineF(renderer, v5.x, v5.y, v0.x, v0.y);
+
+                if (showCoords)
+                {
+                    Vector xPos = cell->pos + xLabelPos + cameraPos;
+                    Vector yPos = cell->pos + yLabelPos + cameraPos;
+                    Vector zPos = cell->pos + zLabelPos + cameraPos;
+
+                    CoordLabel xLabel = cell->ui.xLabel;
+                    CoordLabel yLabel = cell->ui.yLabel;
+                    CoordLabel zLabel = cell->ui.zLabel;
+
+                    SDL_Rect xRect = {(int)xPos.x, (int)xPos.y, xLabel.width, xLabel.height};
+                    SDL_Rect yRect = {(int)yPos.x, (int)yPos.y, yLabel.width, yLabel.height};
+                    SDL_Rect zRect = {(int)zPos.x, (int)zPos.y, zLabel.width, zLabel.height};
+
+                    SDL_RenderCopy(renderer, xLabel.label, NULL, &xRect);
+                    SDL_RenderCopy(renderer, yLabel.label, NULL, &yRect);
+                    SDL_RenderCopy(renderer, zLabel.label, NULL, &zRect);
+                }
+
+                cell++;
+            }
+        }
+
+        SDL_RenderPresent(renderer);
+
+        now = SDL_GetTicks64();
+        Uint64 msThisFrame = now - lastFrame;
+        double fps = 1.0f / msThisFrame * 1000.0f;
+
+        lastFrame = now;
+
+        printf("FPS: %f\n", fps);
     }
 
     free(grid.cells);
