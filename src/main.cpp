@@ -88,18 +88,18 @@ struct HexCoord
     int x, y, z;
 };
 
-struct CoordLabel
+struct Texture
 {
-    SDL_Texture *label;
+    SDL_Texture *texture;
     int width;
     int height;
 };
 
 struct CellUI
 {
-    CoordLabel xLabel;
-    CoordLabel yLabel;
-    CoordLabel zLabel;
+    Texture xLabel;
+    Texture yLabel;
+    Texture zLabel;
 };
 
 struct Cell
@@ -130,6 +130,24 @@ struct GameInput
     Vector arrow;
 };
 
+struct GameUi
+{
+    Texture fps;
+};
+
+void UpdateGameUi(SDL_Renderer *renderer, GameUi *ui, TTF_Font *font, int fps)
+{
+    SDL_Color color = {255, 255, 255, 255};
+
+    char text[20];
+    sprintf(text, "FPS: %i", fps);
+
+    SDL_Surface *surface = TTF_RenderUTF8_Blended(font, text, color);
+    ui->fps.texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    TTF_SizeUTF8(font, text, &ui->fps.width, &ui->fps.height);
+}
+
 HexCoord HexCoordFromOffsetCoord(int x, int y)
 {
     HexCoord result;
@@ -153,13 +171,13 @@ char *IntToString(int coord)
     return buffer;
 }
 
-CoordLabel CreateCoordLabel(SDL_Renderer *renderer, int coord, TTF_Font *font, SDL_Color color)
+Texture CreateCoordLabel(SDL_Renderer *renderer, int coord, TTF_Font *font, SDL_Color color)
 {
-    CoordLabel result;
+    Texture result;
     char *labelText = IntToString(coord);
 
     SDL_Surface *surface = TTF_RenderUTF8_Blended(font, labelText, color);
-    result.label = SDL_CreateTextureFromSurface(renderer, surface);
+    result.texture = SDL_CreateTextureFromSurface(renderer, surface);
 
     TTF_SizeUTF8(font, labelText, &result.width, &result.height);
 
@@ -229,8 +247,12 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
+    GameUi ui;
+    UpdateGameUi(renderer, &ui, font, 0);
+
     Uint64 now = 0;
-    Uint64 lastFrame = 0;
+    Uint64 thisSecond = 0;
+    Uint64 framesThisSecond = 0;
 
     bool isRunning = true;
     bool showCoords = true;
@@ -359,32 +381,38 @@ int main(int, char **)
                     Vector yPos = cellScreenPos + yLabelPos;
                     Vector zPos = cellScreenPos + zLabelPos;
 
-                    CoordLabel xLabel = cell->ui.xLabel;
-                    CoordLabel yLabel = cell->ui.yLabel;
-                    CoordLabel zLabel = cell->ui.zLabel;
+                    Texture xLabel = cell->ui.xLabel;
+                    Texture yLabel = cell->ui.yLabel;
+                    Texture zLabel = cell->ui.zLabel;
 
                     SDL_Rect xRect = {(int)xPos.x, (int)xPos.y, xLabel.width, xLabel.height};
                     SDL_Rect yRect = {(int)yPos.x, (int)yPos.y, yLabel.width, yLabel.height};
                     SDL_Rect zRect = {(int)zPos.x, (int)zPos.y, zLabel.width, zLabel.height};
 
-                    SDL_RenderCopy(renderer, xLabel.label, NULL, &xRect);
-                    SDL_RenderCopy(renderer, yLabel.label, NULL, &yRect);
-                    SDL_RenderCopy(renderer, zLabel.label, NULL, &zRect);
+                    SDL_RenderCopy(renderer, xLabel.texture, NULL, &xRect);
+                    SDL_RenderCopy(renderer, yLabel.texture, NULL, &yRect);
+                    SDL_RenderCopy(renderer, zLabel.texture, NULL, &zRect);
                 }
 
                 cell++;
             }
         }
 
+        SDL_Rect rect = {0, 0, ui.fps.width, ui.fps.height};
+        SDL_RenderCopy(renderer, ui.fps.texture, NULL, &rect);
+
         SDL_RenderPresent(renderer);
 
         now = SDL_GetTicks64();
-        Uint64 msThisFrame = now - lastFrame;
-        double fps = 1.0f / msThisFrame * 1000.0f;
 
-        lastFrame = now;
+        if (now - thisSecond >= 1000)
+        {
+            UpdateGameUi(renderer, &ui, font, framesThisSecond);
+            framesThisSecond = 0;
+            thisSecond = now;
+        }
 
-        printf("FPS: %f\n", fps);
+        framesThisSecond++;
     }
 
     free(grid.cells);
