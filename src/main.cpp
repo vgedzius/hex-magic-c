@@ -112,6 +112,7 @@ struct Cell
 
 struct Grid
 {
+    Vector pos;
     int width;
     int height;
 
@@ -257,13 +258,12 @@ int main(int, char **)
     bool isRunning = true;
     bool showCoords = true;
 
-    Vector gridPos = {100, 100};
-
     Vector xLabelPos = {-60, -25};
     Vector yLabelPos = {15, -65};
     Vector zLabelPos = {5, 15};
 
     Grid grid;
+    grid.pos = {100, 100};
     grid.width = 56;
     grid.height = 16;
     grid.cells = (Cell *)malloc(grid.width * grid.height * sizeof(Cell));
@@ -273,12 +273,10 @@ int main(int, char **)
     {
         for (int x = 0; x < grid.width; x++)
         {
-            Vector pos = {(x + y * 0.5f - y / 2) * metrics.innerRadius * 2.0f,
-                          y * metrics.outerRadius * 1.5f};
-
-            cell->pos = pos + gridPos;
             cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
             cell->color = {127, 127, 127, 255};
+            cell->pos = {(x + y * 0.5f - y / 2) * metrics.innerRadius * 2.0f,
+                         y * metrics.outerRadius * 1.5f};
 
             InitCellUI(renderer, cell, font);
 
@@ -351,7 +349,7 @@ int main(int, char **)
         {
             for (int x = 0; x < grid.width; x++)
             {
-                Vector cellScreenPos = cell->pos + camera.pos;
+                Vector cellScreenPos = grid.pos + cell->pos + camera.pos;
 
                 Vector v0 = cellScreenPos + metrics.corners[0];
                 Vector v1 = cellScreenPos + metrics.corners[1];
