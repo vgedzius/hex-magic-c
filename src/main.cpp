@@ -118,6 +118,13 @@ struct Grid
     Cell *cells;
 };
 
+struct Camera
+{
+    Vector pos;
+    float speed;
+    int width, height;
+};
+
 struct GameInput
 {
     Vector arrow;
@@ -181,8 +188,11 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    int width = 1200;
-    int height = 1000;
+    Camera camera;
+    camera.pos = {0, 0};
+    camera.speed = 100.0f;
+    camera.width = 1200;
+    camera.height = 1000;
 
     HexMetrics metrics;
 
@@ -190,8 +200,8 @@ int main(int, char **)
         "Hex Magic",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        width,
-        height,
+        camera.width,
+        camera.height,
         SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (window == NULL)
@@ -226,9 +236,6 @@ int main(int, char **)
     bool showCoords = true;
 
     Vector gridPos = {100, 100};
-
-    Vector cameraPos = {500, 300};
-    float cameraSpeed = 100.0f;
 
     Vector xLabelPos = {-60, -25};
     Vector yLabelPos = {15, -65};
@@ -310,9 +317,9 @@ int main(int, char **)
             }
         }
 
-        Vector cameraDir = input.arrow * cameraSpeed;
+        Vector cameraDir = input.arrow * camera.speed;
         cameraDir.x *= -1.0f;
-        cameraPos += cameraDir;
+        camera.pos += cameraDir;
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
@@ -322,12 +329,14 @@ int main(int, char **)
         {
             for (int x = 0; x < grid.width; x++)
             {
-                Vector v0 = cell->pos + metrics.corners[0] + cameraPos;
-                Vector v1 = cell->pos + metrics.corners[1] + cameraPos;
-                Vector v2 = cell->pos + metrics.corners[2] + cameraPos;
-                Vector v3 = cell->pos + metrics.corners[3] + cameraPos;
-                Vector v4 = cell->pos + metrics.corners[4] + cameraPos;
-                Vector v5 = cell->pos + metrics.corners[5] + cameraPos;
+                Vector cellScreenPos = cell->pos + camera.pos;
+
+                Vector v0 = cellScreenPos + metrics.corners[0];
+                Vector v1 = cellScreenPos + metrics.corners[1];
+                Vector v2 = cellScreenPos + metrics.corners[2];
+                Vector v3 = cellScreenPos + metrics.corners[3];
+                Vector v4 = cellScreenPos + metrics.corners[4];
+                Vector v5 = cellScreenPos + metrics.corners[5];
 
                 Sint16 vx[6] = {(Sint16)v0.x, (Sint16)v1.x, (Sint16)v2.x, (Sint16)v3.x, (Sint16)v4.x, (Sint16)v5.x};
                 Sint16 vy[6] = {(Sint16)v0.y, (Sint16)v1.y, (Sint16)v2.y, (Sint16)v3.y, (Sint16)v4.y, (Sint16)v5.y};
@@ -346,9 +355,9 @@ int main(int, char **)
 
                 if (showCoords)
                 {
-                    Vector xPos = cell->pos + xLabelPos + cameraPos;
-                    Vector yPos = cell->pos + yLabelPos + cameraPos;
-                    Vector zPos = cell->pos + zLabelPos + cameraPos;
+                    Vector xPos = cellScreenPos + xLabelPos;
+                    Vector yPos = cellScreenPos + yLabelPos;
+                    Vector zPos = cellScreenPos + zLabelPos;
 
                     CoordLabel xLabel = cell->ui.xLabel;
                     CoordLabel yLabel = cell->ui.yLabel;
