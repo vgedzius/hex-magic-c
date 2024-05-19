@@ -16,6 +16,8 @@ add_executable(hex-magic ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp)
 
 target_sources(hex-magic 
     PRIVATE 
+        ${CMAKE_CURRENT_LIST_DIR}/src/hex.h
+        ${CMAKE_CURRENT_LIST_DIR}/src/hex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/math.h
 )
 
