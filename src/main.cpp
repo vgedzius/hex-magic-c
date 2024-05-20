@@ -12,15 +12,15 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    GameState *state = (GameState *)malloc(sizeof(GameState));
+    GameState state;
 
-    state->camera.pos = {0, 0};
-    state->camera.speed = 1.0f;
-    state->camera.width = 1200;
-    state->camera.height = 1000;
-    state->camera.metersToPixels = 100;
+    state.camera.pos = {0, 0};
+    state.camera.speed = 1.0f;
+    state.camera.width = 1200;
+    state.camera.height = 1000;
+    state.camera.metersToPixels = 100;
 
-    state->ui.showCoords = true;
+    state.ui.showCoords = true;
 
     HexMetrics metrics;
 
@@ -28,8 +28,8 @@ int main(int, char **)
         "Hex Magic",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        state->camera.width,
-        state->camera.height,
+        state.camera.width,
+        state.camera.height,
         SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (window == NULL)
@@ -57,7 +57,7 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    UpdateGameUi(renderer, &state->ui, font, 0);
+    UpdateGameUi(renderer, &state.ui, font, 0);
 
     Uint64 now = 0;
     Uint64 thisSecond = 0;
@@ -65,7 +65,7 @@ int main(int, char **)
 
     bool isRunning = true;
 
-    InitGame(renderer, state, &metrics, font);
+    InitGame(renderer, &state, &metrics, font);
 
     while (isRunning)
     {
@@ -90,7 +90,7 @@ int main(int, char **)
 
                 if (key == SDLK_c)
                 {
-                    state->ui.showCoords = !state->ui.showCoords;
+                    state.ui.showCoords = !state.ui.showCoords;
                 }
             }
 
@@ -120,7 +120,7 @@ int main(int, char **)
             }
         }
 
-        UpdateGame(renderer, &input, state, &metrics);
+        UpdateGame(renderer, &input, &state, &metrics);
 
         SDL_RenderPresent(renderer);
 
@@ -128,7 +128,7 @@ int main(int, char **)
 
         if (now - thisSecond >= 1000)
         {
-            UpdateGameUi(renderer, &state->ui, font, framesThisSecond);
+            UpdateGameUi(renderer, &state.ui, font, framesThisSecond);
             framesThisSecond = 0;
             thisSecond = now;
         }
@@ -136,8 +136,7 @@ int main(int, char **)
         framesThisSecond++;
     }
 
-    free(state->grid.cells);
-    free(state);
+    free(state.grid.cells);
 
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
