@@ -61,6 +61,7 @@ struct Camera
     Vector pos;
     float speed;
     int width, height;
+    int metersToPixels;
 };
 
 struct GameInput

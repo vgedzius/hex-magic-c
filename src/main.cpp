@@ -19,6 +19,7 @@ int main(int, char **)
     state->camera.speed = 1.0f;
     state->camera.width = 1200;
     state->camera.height = 1000;
+    state->camera.metersToPixels = 100;
 
     HexMetrics metrics;
 
@@ -68,12 +69,10 @@ int main(int, char **)
     Vector yLabelPos = {0.15f, -0.65f};
     Vector zLabelPos = {0.05f, 0.15f};
 
-    int metersToPixels = 100;
-
     state->grid.pos = {1.0f, 1.0f};
     state->grid.width = 56;
     state->grid.height = 16;
-    state->grid.cells = (Cell *)malloc(state->grid.width * state->grid.height * sizeof(Cell));
+    state->grid.cells = (Cell *)calloc(state->grid.width * state->grid.height, sizeof(Cell));
 
     Cell *cell = state->grid.cells;
     for (int y = 0; y < state->grid.height; y++)
@@ -156,7 +155,8 @@ int main(int, char **)
         {
             for (int x = 0; x < state->grid.width; x++)
             {
-                Vector cellScreenPos = state->grid.pos + cell->pos + state->camera.pos;
+                Camera camera = state->camera;
+                Vector cellScreenPos = state->grid.pos + cell->pos + camera.pos;
 
                 Vector v0 = cellScreenPos + metrics.corners[0];
                 Vector v1 = cellScreenPos + metrics.corners[1];
@@ -165,25 +165,25 @@ int main(int, char **)
                 Vector v4 = cellScreenPos + metrics.corners[4];
                 Vector v5 = cellScreenPos + metrics.corners[5];
 
-                Sint16 vx[6] = {(Sint16)(v0.x * metersToPixels), (Sint16)(v1.x * metersToPixels),
-                                (Sint16)(v2.x * metersToPixels), (Sint16)(v3.x * metersToPixels),
-                                (Sint16)(v4.x * metersToPixels), (Sint16)(v5.x * metersToPixels)};
+                Sint16 vx[6] = {(Sint16)(v0.x * camera.metersToPixels), (Sint16)(v1.x * camera.metersToPixels),
+                                (Sint16)(v2.x * camera.metersToPixels), (Sint16)(v3.x * camera.metersToPixels),
+                                (Sint16)(v4.x * camera.metersToPixels), (Sint16)(v5.x * camera.metersToPixels)};
 
-                Sint16 vy[6] = {(Sint16)(v0.y * metersToPixels), (Sint16)(v1.y * metersToPixels),
-                                (Sint16)(v2.y * metersToPixels), (Sint16)(v3.y * metersToPixels),
-                                (Sint16)(v4.y * metersToPixels), (Sint16)(v5.y * metersToPixels)};
+                Sint16 vy[6] = {(Sint16)(v0.y * camera.metersToPixels), (Sint16)(v1.y * camera.metersToPixels),
+                                (Sint16)(v2.y * camera.metersToPixels), (Sint16)(v3.y * camera.metersToPixels),
+                                (Sint16)(v4.y * camera.metersToPixels), (Sint16)(v5.y * camera.metersToPixels)};
 
                 filledPolygonRGBA(renderer, vx, vy, 6,
                                   cell->color.r, cell->color.g, cell->color.b, cell->color.a);
 
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-                SDL_RenderDrawLineF(renderer, v0.x * metersToPixels, v0.y * metersToPixels, v1.x * metersToPixels, v1.y * metersToPixels);
-                SDL_RenderDrawLineF(renderer, v1.x * metersToPixels, v1.y * metersToPixels, v2.x * metersToPixels, v2.y * metersToPixels);
-                SDL_RenderDrawLineF(renderer, v2.x * metersToPixels, v2.y * metersToPixels, v3.x * metersToPixels, v3.y * metersToPixels);
-                SDL_RenderDrawLineF(renderer, v3.x * metersToPixels, v3.y * metersToPixels, v4.x * metersToPixels, v4.y * metersToPixels);
-                SDL_RenderDrawLineF(renderer, v4.x * metersToPixels, v4.y * metersToPixels, v5.x * metersToPixels, v5.y * metersToPixels);
-                SDL_RenderDrawLineF(renderer, v5.x * metersToPixels, v5.y * metersToPixels, v0.x * metersToPixels, v0.y * metersToPixels);
+                SDL_RenderDrawLineF(renderer, v0.x * camera.metersToPixels, v0.y * camera.metersToPixels, v1.x * camera.metersToPixels, v1.y * camera.metersToPixels);
+                SDL_RenderDrawLineF(renderer, v1.x * camera.metersToPixels, v1.y * camera.metersToPixels, v2.x * camera.metersToPixels, v2.y * camera.metersToPixels);
+                SDL_RenderDrawLineF(renderer, v2.x * camera.metersToPixels, v2.y * camera.metersToPixels, v3.x * camera.metersToPixels, v3.y * camera.metersToPixels);
+                SDL_RenderDrawLineF(renderer, v3.x * camera.metersToPixels, v3.y * camera.metersToPixels, v4.x * camera.metersToPixels, v4.y * camera.metersToPixels);
+                SDL_RenderDrawLineF(renderer, v4.x * camera.metersToPixels, v4.y * camera.metersToPixels, v5.x * camera.metersToPixels, v5.y * camera.metersToPixels);
+                SDL_RenderDrawLineF(renderer, v5.x * camera.metersToPixels, v5.y * camera.metersToPixels, v0.x * camera.metersToPixels, v0.y * camera.metersToPixels);
 
                 if (showCoords)
                 {
@@ -195,9 +195,9 @@ int main(int, char **)
                     Texture yLabel = cell->ui.yLabel;
                     Texture zLabel = cell->ui.zLabel;
 
-                    SDL_FRect xRect = {xPos.x * metersToPixels, xPos.y * metersToPixels, (float)xLabel.width, (float)xLabel.height};
-                    SDL_FRect yRect = {yPos.x * metersToPixels, yPos.y * metersToPixels, (float)yLabel.width, (float)yLabel.height};
-                    SDL_FRect zRect = {zPos.x * metersToPixels, zPos.y * metersToPixels, (float)zLabel.width, (float)zLabel.height};
+                    SDL_FRect xRect = {xPos.x * camera.metersToPixels, xPos.y * camera.metersToPixels, (float)xLabel.width, (float)xLabel.height};
+                    SDL_FRect yRect = {yPos.x * camera.metersToPixels, yPos.y * camera.metersToPixels, (float)yLabel.width, (float)yLabel.height};
+                    SDL_FRect zRect = {zPos.x * camera.metersToPixels, zPos.y * camera.metersToPixels, (float)zLabel.width, (float)zLabel.height};
 
                     SDL_RenderCopyF(renderer, xLabel.texture, NULL, &xRect);
                     SDL_RenderCopyF(renderer, yLabel.texture, NULL, &yRect);
