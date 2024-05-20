@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h>
 
 #include "math.h"
+#include "hex_platform.h"
 
 struct HexMetrics
 {
@@ -21,8 +22,7 @@ struct HexCoord
 struct Texture
 {
     SDL_Texture *texture;
-    int width;
-    int height;
+    int width, height;
 };
 
 struct UILabel
@@ -94,6 +94,6 @@ void InitCellUI(SDL_Renderer *renderer, Cell *cell, TTF_Font *font);
 
 void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int width, int height);
 
-void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state);
+void UpdateGame(SDL_Renderer *renderer, OffScreenBuffer *buffer, GameInput *input, GameState *state);
 
 #endif

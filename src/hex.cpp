@@ -111,15 +111,13 @@ void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int widt
     }
 }
 
-void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state)
+void UpdateGame(SDL_Renderer *renderer, OffScreenBuffer *buffer, GameInput *input, GameState *state)
 {
     Vector cameraDir = input->arrow * state->camera.speed;
     cameraDir.x *= -1.0f;
     state->camera.pos += cameraDir;
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-
+#if 0
     Cell *cell = state->grid.cells;
     for (int y = 0; y < state->grid.height; y++)
     {
@@ -180,4 +178,25 @@ void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state)
 
     SDL_FRect rect = {0, 0, (float)state->ui.fps.width, (float)state->ui.fps.height};
     SDL_RenderCopyF(renderer, state->ui.fps.texture, NULL, &rect);
+#else
+    int minX = 100;
+    int maxX = 200;
+    int minY = 100;
+    int maxY = 200;
+
+    int8_t *destRow = (int8_t *)buffer->pixels + minX * buffer->bytesPerPixel + minY * buffer->pitch;
+    for (int y = minY; y < maxY; ++y)
+    {
+        uint32_t *dest = (uint32_t *)destRow;
+
+        for (int x = minX; x < maxX; ++x)
+        {
+            *dest = 0x0000FFFF;
+
+            ++dest;
+        }
+
+        destRow += buffer->pitch;
+    }
+#endif
 }

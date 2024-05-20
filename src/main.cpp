@@ -2,6 +2,7 @@
 #include <SDL2/SDL_ttf.h>
 
 #include "hex.h"
+#include "hex_platform.h"
 
 int main(int, char **)
 {
@@ -58,6 +59,21 @@ int main(int, char **)
 
     bool isRunning = true;
 
+    OffScreenBuffer buffer;
+
+    buffer.width = width;
+    buffer.height = height;
+    buffer.bytesPerPixel = 4;
+    buffer.pitch = buffer.width * buffer.bytesPerPixel;
+    buffer.pixels = malloc(width * height * buffer.bytesPerPixel);
+
+    Texture renderTexture;
+    renderTexture.width = width;
+    renderTexture.height = height;
+    renderTexture.texture = SDL_CreateTexture(renderer,
+                                              SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+                                              width, height);
+
     InitGame(renderer, &state, font, width, height);
 
     while (isRunning)
@@ -113,7 +129,16 @@ int main(int, char **)
             }
         }
 
-        UpdateGame(renderer, &input, &state);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
+        ClearOffScreenBuffer(&buffer);
+
+        UpdateGame(renderer, &buffer, &input, &state);
+
+        SDL_Rect renderRect = {0, 0, width, height};
+        SDL_UpdateTexture(renderTexture.texture, &renderRect, buffer.pixels, renderTexture.width * buffer.bytesPerPixel);
+        SDL_RenderCopy(renderer, renderTexture.texture, NULL, &renderRect);
 
         SDL_RenderPresent(renderer);
 
@@ -130,6 +155,7 @@ int main(int, char **)
     }
 
     free(state.grid.cells);
+    free(buffer.pixels);
 
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);

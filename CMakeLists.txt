@@ -10,12 +10,14 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 find_package(SDL2_gfx REQUIRED)
 
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Werror -Wno-unused-but-set-variable)
 
 add_executable(hex-magic ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp)
 
 target_sources(hex-magic 
     PRIVATE 
+        ${CMAKE_CURRENT_LIST_DIR}/src/hex_platform.h
+        ${CMAKE_CURRENT_LIST_DIR}/src/hex_platform.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/hex.h
         ${CMAKE_CURRENT_LIST_DIR}/src/hex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/math.h
