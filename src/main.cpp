@@ -14,22 +14,15 @@ int main(int, char **)
 
     GameState state;
 
-    state.camera.pos = {0, 0};
-    state.camera.speed = 1.0f;
-    state.camera.width = 1200;
-    state.camera.height = 1000;
-    state.camera.metersToPixels = 100;
-
-    state.ui.showCoords = true;
-
-    HexMetrics metrics;
+    int width = 1200;
+    int height = 1000;
 
     SDL_Window *window = SDL_CreateWindow(
         "Hex Magic",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        state.camera.width,
-        state.camera.height,
+        width,
+        height,
         SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (window == NULL)
@@ -65,7 +58,7 @@ int main(int, char **)
 
     bool isRunning = true;
 
-    InitGame(renderer, &state, &metrics, font);
+    InitGame(renderer, &state, font, width, height);
 
     while (isRunning)
     {
@@ -120,7 +113,7 @@ int main(int, char **)
             }
         }
 
-        UpdateGame(renderer, &input, &state, &metrics);
+        UpdateGame(renderer, &input, &state);
 
         SDL_RenderPresent(renderer);
 

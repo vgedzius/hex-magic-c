@@ -7,17 +7,10 @@
 
 struct HexMetrics
 {
-    float outerRadius = 1.0f;
-    float innerRadius = outerRadius * 0.866025404f;
+    float outerRadius;
+    float innerRadius;
 
-    Vector corners[6] = {
-        {0.0f, outerRadius},
-        {innerRadius, 0.5f * outerRadius},
-        {innerRadius, -0.5f * outerRadius},
-        {0.0f, -outerRadius},
-        {-innerRadius, -0.5f * outerRadius},
-        {-innerRadius, 0.5f * outerRadius},
-    };
+    Vector corners[6];
 };
 
 struct HexCoord
@@ -86,6 +79,7 @@ struct GameState
     GameUi ui;
     Grid grid;
     Camera camera;
+    HexMetrics metrics;
 };
 
 void UpdateGameUi(SDL_Renderer *renderer, GameUi *ui, TTF_Font *font, int fps);
@@ -98,8 +92,8 @@ Texture CreateCoordLabel(SDL_Renderer *renderer, int coord, TTF_Font *font, SDL_
 
 void InitCellUI(SDL_Renderer *renderer, Cell *cell, TTF_Font *font);
 
-void InitGame(SDL_Renderer *renderer, GameState *state, HexMetrics *metrics, TTF_Font *font);
+void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int width, int height);
 
-void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state, HexMetrics *metrics);
+void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state);
 
 #endif

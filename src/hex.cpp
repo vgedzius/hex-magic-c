@@ -69,8 +69,26 @@ void InitCellUI(SDL_Renderer *renderer, Cell *cell, TTF_Font *font)
     cell->ui.zLabel.texture = CreateCoordLabel(renderer, cell->coord.z, font, zlabelColor);
 }
 
-void InitGame(SDL_Renderer *renderer, GameState *state, HexMetrics *metrics, TTF_Font *font)
+void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int width, int height)
 {
+    state->metrics.outerRadius = 1.0f;
+    state->metrics.innerRadius = state->metrics.outerRadius * 0.866025404f;
+
+    state->metrics.corners[0] = {0.0f, state->metrics.outerRadius};
+    state->metrics.corners[1] = {state->metrics.innerRadius, 0.5f * state->metrics.outerRadius};
+    state->metrics.corners[2] = {state->metrics.innerRadius, -0.5f * state->metrics.outerRadius};
+    state->metrics.corners[3] = {0.0f, -state->metrics.outerRadius};
+    state->metrics.corners[4] = {-state->metrics.innerRadius, -0.5f * state->metrics.outerRadius};
+    state->metrics.corners[5] = {-state->metrics.innerRadius, 0.5f * state->metrics.outerRadius};
+
+    state->camera.pos = {0, 0};
+    state->camera.speed = 1.0f;
+    state->camera.width = width;
+    state->camera.height = height;
+    state->camera.metersToPixels = 100;
+
+    state->ui.showCoords = true;
+
     state->grid.pos = {1.0f, 1.0f};
     state->grid.width = 56;
     state->grid.height = 16;
@@ -83,8 +101,8 @@ void InitGame(SDL_Renderer *renderer, GameState *state, HexMetrics *metrics, TTF
         {
             cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
             cell->color = {127, 127, 127, 255};
-            cell->pos = {(x + y * 0.5f - y / 2) * metrics->innerRadius * 2.0f,
-                         y * metrics->outerRadius * 1.5f};
+            cell->pos = {(x + y * 0.5f - y / 2) * state->metrics.innerRadius * 2.0f,
+                         y * state->metrics.outerRadius * 1.5f};
 
             InitCellUI(renderer, cell, font);
 
@@ -93,7 +111,7 @@ void InitGame(SDL_Renderer *renderer, GameState *state, HexMetrics *metrics, TTF
     }
 }
 
-void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state, HexMetrics *metrics)
+void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state)
 {
     Vector cameraDir = input->arrow * state->camera.speed;
     cameraDir.x *= -1.0f;
@@ -110,12 +128,12 @@ void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state, HexM
             Camera camera = state->camera;
             Vector cellScreenPos = state->grid.pos + cell->pos + camera.pos;
 
-            Vector v0 = cellScreenPos + metrics->corners[0];
-            Vector v1 = cellScreenPos + metrics->corners[1];
-            Vector v2 = cellScreenPos + metrics->corners[2];
-            Vector v3 = cellScreenPos + metrics->corners[3];
-            Vector v4 = cellScreenPos + metrics->corners[4];
-            Vector v5 = cellScreenPos + metrics->corners[5];
+            Vector v0 = cellScreenPos + state->metrics.corners[0];
+            Vector v1 = cellScreenPos + state->metrics.corners[1];
+            Vector v2 = cellScreenPos + state->metrics.corners[2];
+            Vector v3 = cellScreenPos + state->metrics.corners[3];
+            Vector v4 = cellScreenPos + state->metrics.corners[4];
+            Vector v5 = cellScreenPos + state->metrics.corners[5];
 
             Sint16 vx[6] = {(Sint16)(v0.x * camera.metersToPixels), (Sint16)(v1.x * camera.metersToPixels),
                             (Sint16)(v2.x * camera.metersToPixels), (Sint16)(v3.x * camera.metersToPixels),
