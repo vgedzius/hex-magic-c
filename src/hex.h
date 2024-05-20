@@ -72,6 +72,7 @@ struct GameInput
 struct GameUi
 {
     Texture fps;
+    bool showCoords;
 };
 
 struct GameState

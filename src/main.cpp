@@ -21,6 +21,8 @@ int main(int, char **)
     state->camera.height = 1000;
     state->camera.metersToPixels = 100;
 
+    state->ui.showCoords = true;
+
     HexMetrics metrics;
 
     SDL_Window *window = SDL_CreateWindow(
@@ -63,7 +65,6 @@ int main(int, char **)
     Uint64 framesThisSecond = 0;
 
     bool isRunning = true;
-    bool showCoords = true;
 
     Vector xLabelPos = {-0.6f, -0.25f};
     Vector yLabelPos = {0.15f, -0.65f};
@@ -113,7 +114,7 @@ int main(int, char **)
 
                 if (key == SDLK_c)
                 {
-                    showCoords = !showCoords;
+                    state->ui.showCoords = !state->ui.showCoords;
                 }
             }
 
@@ -185,7 +186,7 @@ int main(int, char **)
                 SDL_RenderDrawLineF(renderer, v4.x * camera.metersToPixels, v4.y * camera.metersToPixels, v5.x * camera.metersToPixels, v5.y * camera.metersToPixels);
                 SDL_RenderDrawLineF(renderer, v5.x * camera.metersToPixels, v5.y * camera.metersToPixels, v0.x * camera.metersToPixels, v0.y * camera.metersToPixels);
 
-                if (showCoords)
+                if (state->ui.showCoords)
                 {
                     Vector xPos = cellScreenPos + xLabelPos;
                     Vector yPos = cellScreenPos + yLabelPos;
