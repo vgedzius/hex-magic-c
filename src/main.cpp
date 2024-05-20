@@ -13,11 +13,12 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    Camera camera;
-    camera.pos = {0, 0};
-    camera.speed = 1.0f;
-    camera.width = 1200;
-    camera.height = 1000;
+    GameState *state = (GameState *)malloc(sizeof(GameState));
+
+    state->camera.pos = {0, 0};
+    state->camera.speed = 1.0f;
+    state->camera.width = 1200;
+    state->camera.height = 1000;
 
     HexMetrics metrics;
 
@@ -25,8 +26,8 @@ int main(int, char **)
         "Hex Magic",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        camera.width,
-        camera.height,
+        state->camera.width,
+        state->camera.height,
         SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (window == NULL)
@@ -54,8 +55,7 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    GameUi ui;
-    UpdateGameUi(renderer, &ui, font, 0);
+    UpdateGameUi(renderer, &state->ui, font, 0);
 
     Uint64 now = 0;
     Uint64 thisSecond = 0;
@@ -70,16 +70,15 @@ int main(int, char **)
 
     int metersToPixels = 100;
 
-    Grid grid;
-    grid.pos = {1.0f, 1.0f};
-    grid.width = 56;
-    grid.height = 16;
-    grid.cells = (Cell *)malloc(grid.width * grid.height * sizeof(Cell));
+    state->grid.pos = {1.0f, 1.0f};
+    state->grid.width = 56;
+    state->grid.height = 16;
+    state->grid.cells = (Cell *)malloc(state->grid.width * state->grid.height * sizeof(Cell));
 
-    Cell *cell = grid.cells;
-    for (int y = 0; y < grid.height; y++)
+    Cell *cell = state->grid.cells;
+    for (int y = 0; y < state->grid.height; y++)
     {
-        for (int x = 0; x < grid.width; x++)
+        for (int x = 0; x < state->grid.width; x++)
         {
             cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
             cell->color = {127, 127, 127, 255};
@@ -145,19 +144,19 @@ int main(int, char **)
             }
         }
 
-        Vector cameraDir = input.arrow * camera.speed;
+        Vector cameraDir = input.arrow * state->camera.speed;
         cameraDir.x *= -1.0f;
-        camera.pos += cameraDir;
+        state->camera.pos += cameraDir;
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        Cell *cell = grid.cells;
-        for (int y = 0; y < grid.height; y++)
+        Cell *cell = state->grid.cells;
+        for (int y = 0; y < state->grid.height; y++)
         {
-            for (int x = 0; x < grid.width; x++)
+            for (int x = 0; x < state->grid.width; x++)
             {
-                Vector cellScreenPos = grid.pos + cell->pos + camera.pos;
+                Vector cellScreenPos = state->grid.pos + cell->pos + state->camera.pos;
 
                 Vector v0 = cellScreenPos + metrics.corners[0];
                 Vector v1 = cellScreenPos + metrics.corners[1];
@@ -209,8 +208,8 @@ int main(int, char **)
             }
         }
 
-        SDL_FRect rect = {0, 0, (float)ui.fps.width, (float)ui.fps.height};
-        SDL_RenderCopyF(renderer, ui.fps.texture, NULL, &rect);
+        SDL_FRect rect = {0, 0, (float)state->ui.fps.width, (float)state->ui.fps.height};
+        SDL_RenderCopyF(renderer, state->ui.fps.texture, NULL, &rect);
 
         SDL_RenderPresent(renderer);
 
@@ -218,7 +217,7 @@ int main(int, char **)
 
         if (now - thisSecond >= 1000)
         {
-            UpdateGameUi(renderer, &ui, font, framesThisSecond);
+            UpdateGameUi(renderer, &state->ui, font, framesThisSecond);
             framesThisSecond = 0;
             thisSecond = now;
         }
@@ -226,7 +225,8 @@ int main(int, char **)
         framesThisSecond++;
     }
 
-    free(grid.cells);
+    free(state->grid.cells);
+    free(state);
 
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);

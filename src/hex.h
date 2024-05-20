@@ -73,6 +73,13 @@ struct GameUi
     Texture fps;
 };
 
+struct GameState
+{
+    GameUi ui;
+    Grid grid;
+    Camera camera;
+};
+
 void UpdateGameUi(SDL_Renderer *renderer, GameUi *ui, TTF_Font *font, int fps);
 
 HexCoord HexCoordFromOffsetCoord(int x, int y);
