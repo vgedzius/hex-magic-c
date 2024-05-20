@@ -32,11 +32,17 @@ struct Texture
     int height;
 };
 
+struct UILabel
+{
+    Vector pos;
+    Texture texture;
+};
+
 struct CellUI
 {
-    Texture xLabel;
-    Texture yLabel;
-    Texture zLabel;
+    UILabel xLabel;
+    UILabel yLabel;
+    UILabel zLabel;
 };
 
 struct Cell
@@ -91,5 +97,9 @@ char *IntToString(int coord);
 Texture CreateCoordLabel(SDL_Renderer *renderer, int coord, TTF_Font *font, SDL_Color color);
 
 void InitCellUI(SDL_Renderer *renderer, Cell *cell, TTF_Font *font);
+
+void InitGame(SDL_Renderer *renderer, GameState *state, HexMetrics *metrics, TTF_Font *font);
+
+void UpdateGame(SDL_Renderer *renderer, GameInput *input, GameState *state, HexMetrics *metrics);
 
 #endif
