@@ -117,7 +117,7 @@ void UpdateGame(SDL_Renderer *renderer, OffScreenBuffer *buffer, GameInput *inpu
     cameraDir.x *= -1.0f;
     state->camera.pos += cameraDir;
 
-#if 0
+#if OLD_RENDER == 1
     Cell *cell = state->grid.cells;
     for (int y = 0; y < state->grid.height; y++)
     {

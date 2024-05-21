@@ -136,9 +136,11 @@ int main(int, char **)
 
         UpdateGame(renderer, &buffer, &input, &state);
 
+#if OLD_RENDER == 0
         SDL_Rect renderRect = {0, 0, width, height};
         SDL_UpdateTexture(renderTexture.texture, &renderRect, buffer.pixels, renderTexture.width * buffer.bytesPerPixel);
         SDL_RenderCopy(renderer, renderTexture.texture, NULL, &renderRect);
+#endif
 
         SDL_RenderPresent(renderer);
 
