@@ -113,10 +113,11 @@ void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int widt
 
 void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell)
 {
-    Vector cellGlobalPos = cell->pos + state->grid.pos;
+    Camera *camera = &state->camera;
+    Vector cellScreenPos = camera->pos - cell->pos + state->grid.pos;
 
-    float cellScreenX = cellGlobalPos.x * state->camera.metersToPixels;
-    float cellScreenY = cellGlobalPos.y * state->camera.metersToPixels;
+    float cellScreenX = cellScreenPos.x * state->camera.metersToPixels;
+    float cellScreenY = cellScreenPos.y * state->camera.metersToPixels;
 
     float innerRadiusInPixels = state->metrics.innerRadius * state->camera.metersToPixels;
     float outterRadiusInPixels = state->metrics.outerRadius * state->camera.metersToPixels;

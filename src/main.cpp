@@ -32,7 +32,7 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
 
     if (!renderer)
     {
@@ -138,7 +138,7 @@ int main(int, char **)
 
 #if OLD_RENDER == 0
         SDL_Rect renderRect = {0, 0, width, height};
-        SDL_UpdateTexture(renderTexture.texture, &renderRect, buffer.pixels, renderTexture.width * buffer.bytesPerPixel);
+        SDL_UpdateTexture(renderTexture.texture, &renderRect, buffer.pixels, buffer.width * buffer.bytesPerPixel);
         SDL_RenderCopy(renderer, renderTexture.texture, NULL, &renderRect);
 #endif
 
