@@ -1,5 +1,4 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
 
 #include "hex.h"
 #include "hex_platform.h"
@@ -32,7 +31,7 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_TARGETTEXTURE);
 
     if (!renderer)
     {
@@ -40,18 +39,7 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    const char *fontPath = "assets/fonts/montserrat/Montserrat-Regular.ttf";
-
-    TTF_Init();
-    TTF_Font *font = TTF_OpenFont(fontPath, 42);
-
-    if (font == NULL)
-    {
-        printf("Font not found: %s\n", fontPath);
-        return EXIT_FAILURE;
-    }
-
-    UpdateGameUi(renderer, &state.ui, font, 0);
+    // const char *fontPath = "assets/fonts/montserrat/Montserrat-Regular.ttf";
 
     Uint64 now = 0;
     Uint64 thisSecond = 0;
@@ -74,7 +62,7 @@ int main(int, char **)
                                               SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
                                               width, height);
 
-    InitGame(renderer, &state, font, width, height);
+    InitGame(&state, width, height);
 
     while (isRunning)
     {
@@ -95,11 +83,6 @@ int main(int, char **)
                 if (key == SDLK_q || key == SDLK_ESCAPE)
                 {
                     isRunning = false;
-                }
-
-                if (key == SDLK_c)
-                {
-                    state.ui.showCoords = !state.ui.showCoords;
                 }
             }
 
@@ -134,13 +117,11 @@ int main(int, char **)
 
         ClearOffScreenBuffer(&buffer);
 
-        UpdateGame(renderer, &buffer, &input, &state);
+        UpdateGame(&buffer, &input, &state);
 
-#if OLD_RENDER == 0
         SDL_Rect renderRect = {0, 0, width, height};
         SDL_UpdateTexture(renderTexture.texture, &renderRect, buffer.pixels, buffer.width * buffer.bytesPerPixel);
         SDL_RenderCopy(renderer, renderTexture.texture, NULL, &renderRect);
-#endif
 
         SDL_RenderPresent(renderer);
 
@@ -148,7 +129,6 @@ int main(int, char **)
 
         if (now - thisSecond >= 1000)
         {
-            UpdateGameUi(renderer, &state.ui, font, framesThisSecond);
             printf("FPS: %i\n", (int)framesThisSecond);
             framesThisSecond = 0;
             thisSecond = now;
@@ -160,7 +140,6 @@ int main(int, char **)
     free(state.grid.cells);
     free(buffer.pixels);
 
-    TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
