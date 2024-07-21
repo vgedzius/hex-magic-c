@@ -11,7 +11,7 @@ find_package(SDL2_ttf REQUIRED)
 find_package(SDL2_gfx REQUIRED)
 
 add_compile_options(-Wall -Werror -Wno-unused-but-set-variable)
-add_compile_definitions(OLD_RENDER=1)
+add_compile_definitions(OLD_RENDER=0)
 
 add_executable(hex-magic ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp)
 

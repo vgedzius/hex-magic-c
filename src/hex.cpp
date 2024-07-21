@@ -81,7 +81,7 @@ void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int widt
     state->metrics.corners[4] = {-state->metrics.innerRadius, -0.5f * state->metrics.outerRadius};
     state->metrics.corners[5] = {-state->metrics.innerRadius, 0.5f * state->metrics.outerRadius};
 
-    state->camera.pos = {0, 0};
+    state->camera.pos = {5.f, 5.f};
     state->camera.speed = 1.0f;
     state->camera.width = width;
     state->camera.height = height;
@@ -90,8 +90,8 @@ void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int widt
     state->ui.showCoords = true;
 
     state->grid.pos = {1.0f, 1.0f};
-    state->grid.width = 56;
-    state->grid.height = 16;
+    state->grid.width = 8;
+    state->grid.height = 4;
     state->grid.cells = (Cell *)calloc(state->grid.width * state->grid.height, sizeof(Cell));
 
     Cell *cell = state->grid.cells;
@@ -111,6 +111,66 @@ void InitGame(SDL_Renderer *renderer, GameState *state, TTF_Font *font, int widt
     }
 }
 
+void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell)
+{
+    Vector cellGlobalPos = cell->pos + state->grid.pos;
+
+    float cellScreenX = cellGlobalPos.x * state->camera.metersToPixels;
+    float cellScreenY = cellGlobalPos.y * state->camera.metersToPixels;
+
+    float innerRadiusInPixels = state->metrics.innerRadius * state->camera.metersToPixels;
+    float outterRadiusInPixels = state->metrics.outerRadius * state->camera.metersToPixels;
+
+    float v = outterRadiusInPixels / 2;
+    float h = innerRadiusInPixels;
+
+    int minX = Round(cellScreenX - innerRadiusInPixels);
+    int maxX = Round(cellScreenX + innerRadiusInPixels);
+    int minY = Round(cellScreenY - outterRadiusInPixels);
+    int maxY = Round(cellScreenY + outterRadiusInPixels);
+
+    if (minX < 0)
+    {
+        minX = 0;
+    }
+
+    if (maxX > buffer->width)
+    {
+        maxX = buffer->width;
+    }
+
+    if (minY < 0)
+    {
+        minY = 0;
+    }
+
+    if (maxY > buffer->height)
+    {
+        maxY = buffer->height;
+    }
+
+    int8_t *destRow = (int8_t *)buffer->pixels + minX * buffer->bytesPerPixel + minY * buffer->pitch;
+    for (int y = minY; y < maxY; ++y)
+    {
+        uint32_t *dest = (uint32_t *)destRow;
+
+        for (int x = minX; x < maxX; ++x)
+        {
+            float q2x = Abs(x - cellScreenX);
+            float q2y = Abs(y - cellScreenY);
+
+            if (2 * v * h - v * q2x - h * q2y >= 0)
+            {
+                *dest = 0x0000FFFF;
+            }
+
+            ++dest;
+        }
+
+        destRow += buffer->pitch;
+    }
+}
+
 void UpdateGame(SDL_Renderer *renderer, OffScreenBuffer *buffer, GameInput *input, GameState *state)
 {
     Vector cameraDir = input->arrow * state->camera.speed;
@@ -118,12 +178,46 @@ void UpdateGame(SDL_Renderer *renderer, OffScreenBuffer *buffer, GameInput *inpu
     state->camera.pos += cameraDir;
 
 #if OLD_RENDER == 1
-    Cell *cell = state->grid.cells;
-    for (int y = 0; y < state->grid.height; y++)
+    Camera camera = state->camera;
+    HexMetrics *metrics = &state->metrics;
+
+    Vector cameraGridPos = camera.pos - state->grid.pos;
+
+    int cameraCenterX = cameraGridPos.x / metrics->innerRadius * 2.0f;
+    int cameraCenterY = cameraGridPos.y / metrics->outerRadius * 1.5f;
+
+    int cameraMinX = cameraCenterX - 10;
+    int cameraMaxX = cameraCenterX + 10;
+    int cameraMinY = cameraCenterY - 10;
+    int cameraMaxY = cameraCenterY + 10;
+
+    if (cameraMinX < 0)
     {
-        for (int x = 0; x < state->grid.width; x++)
+        cameraMinX = 0;
+    }
+
+    if (cameraMaxX > state->grid.width)
+    {
+        cameraMaxX = state->grid.width;
+    }
+
+    if (cameraMinY < 0)
+    {
+        cameraMinY = 0;
+    }
+
+    if (cameraMaxY > state->grid.height)
+    {
+        cameraMaxY = state->grid.height;
+    }
+
+    Cell *row = state->grid.cells + cameraMinX + cameraMinY * state->grid.width;
+    for (int y = cameraMinY; y < cameraMaxY; y++)
+    {
+        Cell *cell = row;
+
+        for (int x = cameraMinX; x < cameraMaxX; x++)
         {
-            Camera camera = state->camera;
             Vector cellScreenPos = state->grid.pos + cell->pos + camera.pos;
 
             Vector v0 = cellScreenPos + state->metrics.corners[0];
@@ -172,31 +266,21 @@ void UpdateGame(SDL_Renderer *renderer, OffScreenBuffer *buffer, GameInput *inpu
                 SDL_RenderCopyF(renderer, zLabel.texture, NULL, &zRect);
             }
 
-            cell++;
+            ++cell;
         }
+
+        row += state->grid.width;
     }
 
     SDL_FRect rect = {0, 0, (float)state->ui.fps.width, (float)state->ui.fps.height};
     SDL_RenderCopyF(renderer, state->ui.fps.texture, NULL, &rect);
 #else
-    int minX = 100;
-    int maxX = 200;
-    int minY = 100;
-    int maxY = 200;
-
-    int8_t *destRow = (int8_t *)buffer->pixels + minX * buffer->bytesPerPixel + minY * buffer->pitch;
-    for (int y = minY; y < maxY; ++y)
+    Cell *cell = state->grid.cells;
+    for (int i = 0; i < state->grid.width * state->grid.height; i++)
     {
-        uint32_t *dest = (uint32_t *)destRow;
+        DrawCell(buffer, state, cell);
 
-        for (int x = minX; x < maxX; ++x)
-        {
-            *dest = 0x0000FFFF;
-
-            ++dest;
-        }
-
-        destRow += buffer->pitch;
+        cell++;
     }
 #endif
 }

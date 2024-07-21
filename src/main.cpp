@@ -32,7 +32,7 @@ int main(int, char **)
         return EXIT_FAILURE;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     if (!renderer)
     {
@@ -149,6 +149,7 @@ int main(int, char **)
         if (now - thisSecond >= 1000)
         {
             UpdateGameUi(renderer, &state.ui, font, framesThisSecond);
+            printf("FPS: %i\n", (int)framesThisSecond);
             framesThisSecond = 0;
             thisSecond = now;
         }

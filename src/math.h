@@ -67,4 +67,14 @@ inline Vector operator-(Vector a, Vector b)
     return result;
 }
 
+inline int Abs(int number)
+{
+    return abs(number);
+}
+
+inline int Round(float number)
+{
+    return roundf(number);
+}
+
 #endif
