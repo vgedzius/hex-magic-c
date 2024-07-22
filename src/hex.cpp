@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include "hex.h"
 
 HexCoord HexCoordFromOffsetCoord(int x, int y)
@@ -63,7 +62,11 @@ void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell)
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
-                *dest = 0x0000FFFF;
+                uint32_t color = (Round(cell->color.r * 255.0f) << 24) |
+                                 (Round(cell->color.g * 255.0f) << 16) |
+                                 (Round(cell->color.b * 255.0f) << 8);
+
+                *dest = color;
             }
 
             ++dest;
@@ -102,7 +105,7 @@ void InitGame(GameState *state, int width, int height)
         for (int x = 0; x < state->grid.width; x++)
         {
             cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
-            cell->color = {127, 127, 127, 255};
+            cell->color = {0.5f, 0.5f, 0.5f};
             cell->pos = {(x + y * 0.5f - y / 2) * state->metrics.innerRadius * 2.0f,
                          y * state->metrics.outerRadius * 1.5f};
 

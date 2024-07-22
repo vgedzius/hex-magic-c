@@ -1,6 +1,8 @@
 #ifndef MATH_H_
 #define MATH_H_
 
+#include <math.h>
+
 struct Vector
 {
     float x, y;
@@ -74,7 +76,7 @@ inline int Abs(int number)
 
 inline int Round(float number)
 {
-    return roundf(number);
+    return (int)roundf(number);
 }
 
 #endif

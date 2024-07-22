@@ -17,11 +17,16 @@ struct HexCoord
     int x, y, z;
 };
 
+struct Color
+{
+    float r, g, b;
+};
+
 struct Cell
 {
     Vector pos;
     HexCoord coord;
-    SDL_Color color;
+    Color color;
 };
 
 struct Grid
