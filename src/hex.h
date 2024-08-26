@@ -4,6 +4,8 @@
 #include "math.h"
 #include "hex_platform.h"
 
+const int MAX_CHILDREN = 1000;
+
 struct HexMetrics
 {
     float outerRadius;
@@ -22,16 +24,32 @@ struct Color
     float r, g, b;
 };
 
+struct Transform
+{
+    Transform *parent;
+
+    int numberOfChildren = 0;
+    Transform *children[MAX_CHILDREN]; // FIXME this should be dynamic, a linked list?
+
+    Vector localPosition;
+
+    bool isDirty = true;
+    Matrix3x3 localToWorld;
+
+    bool isInverseDirty;
+    Matrix3x3 worldToLocal;
+};
+
 struct Cell
 {
-    Vector pos;
+    Transform transform;
     HexCoord coord;
     Color color;
 };
 
 struct Grid
 {
-    Vector pos;
+    Transform transform;
     int width;
     int height;
 
@@ -40,7 +58,7 @@ struct Grid
 
 struct Camera
 {
-    Vector pos;
+    Transform transform;
     float speed;
     int width, height;
     int metersToPixels;
@@ -59,6 +77,8 @@ struct GameState
 };
 
 HexCoord HexCoordFromOffsetCoord(int x, int y);
+
+void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell);
 
 void InitGame(GameState *state, int width, int height);
 

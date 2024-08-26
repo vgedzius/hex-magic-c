@@ -1,5 +1,97 @@
 #include "hex.h"
 
+Vector Zero()
+{
+    Vector result = {0.0f, 0.0f};
+
+    return result;
+}
+
+Matrix3x3 Identity()
+{
+    Matrix3x3 result = {1.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f};
+
+    return result;
+}
+
+void Translate(Transform *transform, Vector point)
+{
+    transform->localPosition = transform->localPosition + point;
+    transform->isDirty = true;
+}
+
+Matrix3x3 TranslateMatrix(Vector pos)
+{
+    Matrix3x3 result = {1.0f, 0.0f, pos.x,
+                        0.0f, 1.0f, pos.y,
+                        0.0f, 0.0f, 1.0f};
+
+    return result;
+}
+
+void SetDirty(Transform *transform)
+{
+    if (transform->isDirty)
+        return;
+
+    transform->isDirty = true;
+    transform->isInverseDirty = true;
+
+    for (int i = 0; i < MAX_CHILDREN; i++)
+    {
+        SetDirty(transform->children[i]);
+    }
+}
+
+void Remove(Transform *transform, Transform *child)
+{
+    bool removed = false;
+    for (int i = 0; i < transform->numberOfChildren; i++)
+    {
+    }
+
+    if (removed)
+    {
+        transform->numberOfChildren--;
+    }
+}
+
+Matrix3x3 CalculateLocalToParentMatrix(Transform *transform)
+{
+    return TranslateMatrix(transform->localPosition);
+}
+
+Matrix3x3 LocalToWorldMatrix(Transform *transform)
+{
+    if (transform->isDirty)
+    {
+        if (transform->parent == NULL)
+        {
+            transform->localToWorld = CalculateLocalToParentMatrix(transform);
+        }
+        else
+        {
+            transform->localToWorld = LocalToWorldMatrix(transform->parent) * CalculateLocalToParentMatrix(transform);
+        }
+
+        transform->isDirty = false;
+    }
+
+    return transform->localToWorld;
+}
+
+Vector TransformPoint(Transform *transform, Vector point)
+{
+    Matrix1x3 pointMatrix = {point.x, point.y, 1.0f};
+    Matrix1x3 transformResult = LocalToWorldMatrix(transform) * pointMatrix;
+
+    Vector result = {transformResult.x, transformResult.y};
+
+    return result;
+}
+
 HexCoord HexCoordFromOffsetCoord(int x, int y)
 {
     HexCoord result;
@@ -14,7 +106,9 @@ HexCoord HexCoordFromOffsetCoord(int x, int y)
 void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell)
 {
     Camera *camera = &state->camera;
-    Vector cellScreenPos = camera->pos - cell->pos + state->grid.pos;
+    Vector cellWorldPosition = TransformPoint(&cell->transform, Zero());
+    Vector cameraWorldPosition = TransformPoint(&camera->transform, Zero());
+    Vector cellScreenPos = cameraWorldPosition - cellWorldPosition;
 
     float cellScreenX = cellScreenPos.x * state->camera.metersToPixels;
     float cellScreenY = cellScreenPos.y * state->camera.metersToPixels;
@@ -88,13 +182,15 @@ void InitGame(GameState *state, int width, int height)
     state->metrics.corners[4] = {-state->metrics.innerRadius, -0.5f * state->metrics.outerRadius};
     state->metrics.corners[5] = {-state->metrics.innerRadius, 0.5f * state->metrics.outerRadius};
 
-    state->camera.pos = {5.f, 5.f};
+    state->camera.transform.parent = NULL;
+    state->camera.transform.localPosition = {5.0f, 5.0f};
     state->camera.speed = 1.0f;
     state->camera.width = width;
     state->camera.height = height;
     state->camera.metersToPixels = 100;
 
-    state->grid.pos = {1.0f, 1.0f};
+    state->grid.transform.parent = NULL;
+    state->grid.transform.localPosition = {1.0f, 1.0f};
     state->grid.width = 8;
     state->grid.height = 4;
     state->grid.cells = (Cell *)calloc(state->grid.width * state->grid.height, sizeof(Cell));
@@ -106,8 +202,11 @@ void InitGame(GameState *state, int width, int height)
         {
             cell->coord = HexCoordFromOffsetCoord(x - y / 2, y);
             cell->color = {0.5f, 0.5f, 0.5f};
-            cell->pos = {(x + y * 0.5f - y / 2) * state->metrics.innerRadius * 2.0f,
-                         y * state->metrics.outerRadius * 1.5f};
+
+            cell->transform.parent = &state->grid.transform;
+            cell->transform.isDirty = true;
+            cell->transform.localPosition = {(x + y * 0.5f - y / 2) * state->metrics.innerRadius * 2.0f,
+                                             y * state->metrics.outerRadius * 1.5f};
 
             cell++;
         }
@@ -120,7 +219,7 @@ void UpdateGame(OffScreenBuffer *buffer, GameInput *input, GameState *state)
 
     Vector cameraDir = input->arrow * camera->speed;
     cameraDir.x *= -1.0f;
-    state->camera.pos += cameraDir;
+    Translate(&state->camera.transform, cameraDir);
 
     Cell *cell = state->grid.cells;
     for (int i = 0; i < state->grid.width * state->grid.height; i++)
