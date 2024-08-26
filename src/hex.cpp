@@ -19,7 +19,7 @@ Matrix3x3 Identity()
 void Translate(Transform *transform, Vector point)
 {
     transform->localPosition = transform->localPosition + point;
-    transform->isDirty = true;
+    SetDirty(transform);
 }
 
 Matrix3x3 TranslateMatrix(Vector pos)
@@ -39,7 +39,7 @@ void SetDirty(Transform *transform)
     transform->isDirty = true;
     transform->isInverseDirty = true;
 
-    for (int i = 0; i < MAX_CHILDREN; i++)
+    for (int i = 0; i < transform->numberOfChildren; i++)
     {
         SetDirty(transform->children[i]);
     }
@@ -204,9 +204,10 @@ void InitGame(GameState *state, int width, int height)
             cell->color = {0.5f, 0.5f, 0.5f};
 
             cell->transform.parent = &state->grid.transform;
-            cell->transform.isDirty = true;
             cell->transform.localPosition = {(x + y * 0.5f - y / 2) * state->metrics.innerRadius * 2.0f,
                                              y * state->metrics.outerRadius * 1.5f};
+
+            SetDirty(&cell->transform);
 
             cell++;
         }

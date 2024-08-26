@@ -36,7 +36,7 @@ struct Transform
     bool isDirty = true;
     Matrix3x3 localToWorld;
 
-    bool isInverseDirty;
+    bool isInverseDirty = true;
     Matrix3x3 worldToLocal;
 };
 
@@ -77,6 +77,8 @@ struct GameState
 };
 
 HexCoord HexCoordFromOffsetCoord(int x, int y);
+
+void SetDirty(Transform *transform);
 
 void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell);
 
