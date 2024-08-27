@@ -31,6 +31,15 @@ Matrix3x3 TranslateMatrix(Vector pos)
     return result;
 }
 
+Matrix3x3 ScaleMatrix(Vector scale)
+{
+    Matrix3x3 result = {scale.x, 0.0f, 0.0f,
+                        0.0f, scale.y, 0.0f,
+                        0.0f, 0.0f, 1.0f};
+
+    return result;
+}
+
 void SetDirty(Transform *transform)
 {
     if (transform->isDirty)
@@ -60,7 +69,7 @@ void Remove(Transform *transform, Transform *child)
 
 Matrix3x3 CalculateLocalToParentMatrix(Transform *transform)
 {
-    return TranslateMatrix(transform->localPosition);
+    return TranslateMatrix(transform->localPosition) * ScaleMatrix(transform->localScale);
 }
 
 Matrix3x3 LocalToWorldMatrix(Transform *transform)
@@ -110,19 +119,13 @@ void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell)
     Vector cameraWorldPosition = TransformPoint(&camera->transform, Zero());
     Vector cellScreenPos = cameraWorldPosition - cellWorldPosition;
 
-    float cellScreenX = cellScreenPos.x * state->camera.metersToPixels;
-    float cellScreenY = cellScreenPos.y * state->camera.metersToPixels;
+    float v = state->metrics.outerRadius * state->camera.transform.localScale.x / 2;
+    float h = state->metrics.innerRadius * state->camera.transform.localScale.y;
 
-    float innerRadiusInPixels = state->metrics.innerRadius * state->camera.metersToPixels;
-    float outterRadiusInPixels = state->metrics.outerRadius * state->camera.metersToPixels;
-
-    float v = outterRadiusInPixels / 2;
-    float h = innerRadiusInPixels;
-
-    int minX = Round(cellScreenX - innerRadiusInPixels);
-    int maxX = Round(cellScreenX + innerRadiusInPixels);
-    int minY = Round(cellScreenY - outterRadiusInPixels);
-    int maxY = Round(cellScreenY + outterRadiusInPixels);
+    int minX = Round((cellScreenPos.x - state->metrics.innerRadius) * state->camera.transform.localScale.x);
+    int maxX = Round((cellScreenPos.x + state->metrics.innerRadius) * state->camera.transform.localScale.x);
+    int minY = Round((cellScreenPos.y - state->metrics.outerRadius) * state->camera.transform.localScale.y);
+    int maxY = Round((cellScreenPos.y + state->metrics.outerRadius) * state->camera.transform.localScale.y);
 
     if (minX < 0)
     {
@@ -151,8 +154,8 @@ void DrawCell(OffScreenBuffer *buffer, GameState *state, Cell *cell)
 
         for (int x = minX; x < maxX; ++x)
         {
-            float q2x = Abs(x - cellScreenX);
-            float q2y = Abs(y - cellScreenY);
+            float q2x = Abs(x - cellScreenPos.x * state->camera.transform.localScale.x);
+            float q2y = Abs(y - cellScreenPos.y * state->camera.transform.localScale.y);
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
@@ -184,13 +187,14 @@ void InitGame(GameState *state, int width, int height)
 
     state->camera.transform.parent = NULL;
     state->camera.transform.localPosition = {5.0f, 5.0f};
+    state->camera.transform.localScale = {100.0f, 100.0f};
     state->camera.speed = 1.0f;
     state->camera.width = width;
     state->camera.height = height;
-    state->camera.metersToPixels = 100;
 
     state->grid.transform.parent = NULL;
     state->grid.transform.localPosition = {1.0f, 1.0f};
+    state->grid.transform.localScale = {1.0f, 1.0f};
     state->grid.width = 8;
     state->grid.height = 4;
     state->grid.cells = (Cell *)calloc(state->grid.width * state->grid.height, sizeof(Cell));
@@ -204,6 +208,7 @@ void InitGame(GameState *state, int width, int height)
             cell->color = {0.5f, 0.5f, 0.5f};
 
             cell->transform.parent = &state->grid.transform;
+            cell->transform.localScale = {1.0f, 1.0f};
             cell->transform.localPosition = {(x + y * 0.5f - y / 2) * state->metrics.innerRadius * 2.0f,
                                              y * state->metrics.outerRadius * 1.5f};
 

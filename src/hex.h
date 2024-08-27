@@ -32,6 +32,7 @@ struct Transform
     Transform *children[MAX_CHILDREN]; // FIXME this should be dynamic, a linked list?
 
     Vector localPosition;
+    Vector localScale;
 
     bool isDirty = true;
     Matrix3x3 localToWorld;
@@ -61,7 +62,6 @@ struct Camera
     Transform transform;
     float speed;
     int width, height;
-    int metersToPixels;
 };
 
 struct GameInput
