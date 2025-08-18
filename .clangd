@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [-fno-rtti, -fno-exceptions, -Wall, -Werror, -Wno-write-strings, -Wno-unused-variable, -Wno-unused-function, -Wno-unused-but-set-variable, -Wno-missing-braces, -DHEX_MAGIC_INTERNAL, -DHEX_MAGIC_SLOW, -DCOMPILER_GCC]
