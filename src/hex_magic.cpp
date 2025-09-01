@@ -65,13 +65,13 @@ internal void DrawCell(GameOffscreenBuffer *buffer, GameState *state, Cell *cell
     V2 cellScreenPos = cell->position + state->world->position;
     real32 scale     = 50.0f;
 
-    real32 v = world->metrics.outerRadius * scale / 2;
-    real32 h = world->metrics.innerRadius * scale;
+    cellScreenPos *= scale;
+    cellScreenPos.y = buffer->height - cellScreenPos.y;
 
-    int32 minX = RoundReal32ToInt32((cellScreenPos.x - world->metrics.innerRadius) * scale);
-    int32 maxX = RoundReal32ToInt32((cellScreenPos.x + world->metrics.innerRadius) * scale);
-    int32 minY = RoundReal32ToInt32((cellScreenPos.y - world->metrics.outerRadius) * scale);
-    int32 maxY = RoundReal32ToInt32((cellScreenPos.y + world->metrics.outerRadius) * scale);
+    int32 minX = RoundReal32ToInt32((cellScreenPos.x - world->metrics.innerRadius * scale));
+    int32 maxX = RoundReal32ToInt32((cellScreenPos.x + world->metrics.innerRadius * scale));
+    int32 minY = RoundReal32ToInt32((cellScreenPos.y - world->metrics.outerRadius * scale));
+    int32 maxY = RoundReal32ToInt32((cellScreenPos.y + world->metrics.outerRadius * scale));
 
     if (minX < 0)
     {
@@ -93,6 +93,9 @@ internal void DrawCell(GameOffscreenBuffer *buffer, GameState *state, Cell *cell
         maxY = buffer->height;
     }
 
+    real32 v = world->metrics.outerRadius * scale / 2;
+    real32 h = world->metrics.innerRadius * scale;
+
     uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
     {
@@ -100,8 +103,8 @@ internal void DrawCell(GameOffscreenBuffer *buffer, GameState *state, Cell *cell
 
         for (int32 x = minX; x < maxX; ++x)
         {
-            real32 q2x = Abs(x - cellScreenPos.x * scale);
-            real32 q2y = Abs(y - cellScreenPos.y * scale);
+            real32 q2x = Abs(x - cellScreenPos.x);
+            real32 q2y = Abs(y - cellScreenPos.y);
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
