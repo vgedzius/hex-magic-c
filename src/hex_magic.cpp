@@ -62,8 +62,8 @@ inline HexCoord HexCoordFromOffsetCoord(uint32 x, uint32 y)
 internal void DrawCell(GameOffscreenBuffer *buffer, GameState *state, Cell *cell)
 {
     World *world     = state->world;
-    V2 cellScreenPos = cell->position;
-    real32 scale     = 100.0f;
+    V2 cellScreenPos = cell->position + state->world->position;
+    real32 scale     = 50.0f;
 
     real32 v = world->metrics.outerRadius * scale / 2;
     real32 h = world->metrics.innerRadius * scale;
@@ -144,21 +144,28 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->metrics.corners[5] = {-world->metrics.innerRadius,
                                      0.5f * world->metrics.outerRadius};
 
-        world->width  = 3;
-        world->height = 2;
-        world->cells  = PushArray(&gameState->worldArena, world->width * world->height, Cell);
+        world->position = {1.0f, 1.0f};
+        world->width    = 8;
+        world->height   = 5;
+        world->cells    = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
         Cell *cell = world->cells;
+
+        uint32 counter = 0;
+        Color c[3]     = {{0.25f, 0.25f, 0.25f}, {0.5f, 0.5f, 0.5f}, {0.75f, 0.75f, 0.75f}};
+
         for (uint32 y = 0; y < world->height; y++)
         {
             for (uint32 x = 0; x < world->width; x++)
             {
-                cell->coord    = HexCoordFromOffsetCoord(x - y / 2, y);
-                cell->color    = {0.5f, 0.5f, 0.5f};
-                cell->position = {(x + y * 0.5f - y / 2) * world->metrics.innerRadius * 2.0f,
-                                  y * world->metrics.outerRadius * 1.5f};
+                uint32 colorIndex = counter % 3;
+                cell->coord       = HexCoordFromOffsetCoord(x - y / 2, y);
+                cell->color       = c[colorIndex];
+                cell->position    = {(x + y * 0.5f - y / 2) * world->metrics.innerRadius * 2.0f,
+                                     y * world->metrics.outerRadius * 1.5f};
 
                 cell++;
+                counter++;
             }
         }
 

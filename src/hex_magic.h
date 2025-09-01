@@ -39,6 +39,7 @@ struct Cell
 struct World
 {
     HexMetrics metrics;
+    V2 position;
 
     uint32 width;
     uint32 height;
