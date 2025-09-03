@@ -121,6 +121,14 @@ internal void DrawCell(GameOffscreenBuffer *buffer, GameState *state, Cell *cell
         destRow += buffer->pitch;
     }
 }
+
+inline Cell *GetCellByOffsetCoords(World *world, uint32 x, uint32 y)
+{
+    Assert(x <= world->width && y <= world->height);
+
+    return &world->cells[y * world->width + x];
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 {
     Assert(sizeof(GameState) <= memory->permanentStorageSize);
@@ -148,8 +156,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                                      0.5f * world->metrics.outerRadius};
 
         world->position = {1.0f, 1.0f};
-        world->width    = 8;
-        world->height   = 5;
+        world->width    = 1000;
+        world->height   = 800;
         world->cells    = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
         Cell *cell = world->cells;
@@ -175,12 +183,15 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         memory->isInitialized = true;
     }
 
-    Cell *cell = gameState->world->cells;
-    for (uint32 i = 0; i < gameState->world->width * gameState->world->height; i++)
+    for (uint32 y = 0; y < 8; ++y)
     {
-        DrawCell(buffer, gameState, cell);
+        for (uint32 x = 0; x < 12; ++x)
+        {
+            Cell *cell = GetCellByOffsetCoords(gameState->world, x, y);
+            DrawCell(buffer, gameState, cell);
 
-        cell++;
+            cell++;
+        }
     }
 }
 

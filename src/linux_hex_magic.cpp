@@ -865,8 +865,10 @@ int main(int argc, char *args[])
     GameInput *newInput = &input[0];
     GameInput *oldInput = &input[1];
 
-    uint64 lastCounter  = SDL_GetPerformanceCounter();
-    uint64 flpWallClock = SDL_GetPerformanceCounter();
+    uint64 lastCounter   = SDL_GetPerformanceCounter();
+    uint64 flpWallClock  = SDL_GetPerformanceCounter();
+    uint32 fps           = 0;
+    real64 currentSecond = 0.0f;
 
     uint32 debugTimeMarkerIndex               = 0;
     LinuxDebugTimeMarker debugTimeMarkers[30] = {};
@@ -1077,11 +1079,29 @@ int main(int argc, char *args[])
                 // TODO skipped the frame, we should know about this
             }
 
-            uint64 endCounter = SDL_GetPerformanceCounter();
-            real64 msPerFrame = LinuxGetSecondsElapsed(lastCounter, endCounter) * 1000.0f;
-            lastCounter       = endCounter;
+            uint64 endCounter      = SDL_GetPerformanceCounter();
+            real64 secondsPerFrame = LinuxGetSecondsElapsed(lastCounter, endCounter);
+            real64 msPerFrame      = secondsPerFrame * 1000.0f;
+            lastCounter            = endCounter;
+
+            currentSecond += secondsPerFrame;
+            fps++;
 
 #if HEX_MAGIC_INTERNAL
+            uint64 endCycleCount = __rdtsc();
+            uint64 cyclesElapsed = endCycleCount - lastCycleCount;
+            lastCycleCount       = endCycleCount;
+
+            real64 mcPerFrame = (real64)cyclesElapsed / (1000 * 1000);
+
+            if (currentSecond > 1.0f)
+            {
+                printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
+
+                currentSecond = 0.0f;
+                fps           = 0;
+            }
+
             {
                 // LinuxDebugSyncDisplay(&globalBackBuffer, ArrayCount(debugTimeMarkers),
                 //                       debugTimeMarkers, debugTimeMarkerIndex - 1, &soundOutput,
@@ -1106,17 +1126,6 @@ int main(int argc, char *args[])
             GameInput *temp = newInput;
             newInput        = oldInput;
             oldInput        = temp;
-
-#if 0
-            uint64 endCycleCount = __rdtsc();
-            uint64 cyclesElapsed = endCycleCount - lastCycleCount;
-            lastCycleCount       = endCycleCount;
-
-            real64 fps        = 0.0f;
-            real64 mcPerFrame = (real64)cyclesElapsed / (1000 * 1000);
-
-            printf("%.02fms/f, %.02ff/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
-#endif
 
 #if HEX_MAGIC_INTERNAL
             ++debugTimeMarkerIndex;
