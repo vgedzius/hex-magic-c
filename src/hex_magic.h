@@ -40,6 +40,7 @@ struct World
 {
     HexMetrics metrics;
     V2 position;
+    real32 scale;
 
     uint32 width;
     uint32 height;
