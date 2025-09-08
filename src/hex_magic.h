@@ -29,8 +29,9 @@ struct Color
 struct Cell
 {
     HexCoord coord;
-    Color color;
     V2 position;
+
+    Color color;
 };
 
 struct World

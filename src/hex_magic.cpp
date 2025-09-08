@@ -319,6 +319,10 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     HexCoord cameraHexPos    = V2ToHex(gameState->cameraPos);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
+    V2 mouseWorldPos     = ScreenToWorld(buffer, gameState, input->mouseX, input->mouseY);
+    HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
+    Color hoverColor     = {1.0f, 1.0f, 1.0f};
+
     for (int32 relY = -5; relY < 5; ++relY)
     {
         for (int32 relX = -7; relX < 7; ++relX)
@@ -336,7 +340,11 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 cellScreenPos += screenCenter;
                 cellScreenPos.y = buffer->height - cellScreenPos.y;
 
-                DrawCell(buffer, world, cellScreenPos, cell->color);
+                Color color = mouseHexPos.q == cell->coord.q && mouseHexPos.r == cell->coord.r
+                                  ? hoverColor
+                                  : cell->color;
+
+                DrawCell(buffer, world, cellScreenPos, color);
             }
         }
     }
