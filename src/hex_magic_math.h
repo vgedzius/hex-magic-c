@@ -72,6 +72,13 @@ inline V2 operator-(V2 a, V2 b)
     return result;
 }
 
+inline V2 &operator-=(V2 &a, V2 b)
+{
+    a = a - b;
+
+    return a;
+}
+
 inline uint32 Abs(int32 v)
 {
     int32 mask    = v >> sizeof(int32) * (CHAR_BIT - 1);

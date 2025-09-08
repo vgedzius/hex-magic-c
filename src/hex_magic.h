@@ -11,17 +11,14 @@ struct MemoryArena
     MemoryIndex used;
 };
 
-struct HexMetrics
-{
-    real32 outerRadius;
-    real32 innerRadius;
-
-    V2 corners[6];
-};
-
 struct HexCoord
 {
-    int32 x, y, z;
+    int32 q, r, s;
+};
+
+struct OffsetCoord
+{
+    int32 x, y;
 };
 
 struct Color
@@ -38,12 +35,11 @@ struct Cell
 
 struct World
 {
-    HexMetrics metrics;
     V2 position;
     real32 scale;
 
-    uint32 width;
-    uint32 height;
+    int32 width;
+    int32 height;
 
     Cell *cells;
 };

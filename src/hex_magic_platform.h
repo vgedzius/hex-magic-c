@@ -40,6 +40,7 @@ typedef double real64;
 #define global static
 
 #define PI32 3.14159265359f
+#define SQRT3 1.73205080757f
 
 #if HEX_MAGIC_SLOW
 #define Assert(expression)                                                                         \

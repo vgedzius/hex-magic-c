@@ -1,3 +1,5 @@
+#include <cstdio>
+
 #include "hex_magic.h"
 #include "hex_magic_intrinsics.h"
 #include "hex_magic_platform.h"
@@ -92,23 +94,12 @@ internal void GameOutputSound(GameState *gameState, GameSoundOutputBuffer *sound
     }
 }
 
-inline HexCoord HexCoordFromOffsetCoord(uint32 x, uint32 y)
-{
-    HexCoord result;
-
-    result.x = x;
-    result.y = y;
-    result.z = -x - y;
-
-    return result;
-}
-
 internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color color)
 {
-    int32 minX = RoundReal32ToInt32((pos.x - world->metrics.innerRadius * world->scale));
-    int32 maxX = RoundReal32ToInt32((pos.x + world->metrics.innerRadius * world->scale));
-    int32 minY = RoundReal32ToInt32((pos.y - world->metrics.outerRadius * world->scale));
-    int32 maxY = RoundReal32ToInt32((pos.y + world->metrics.outerRadius * world->scale));
+    int32 minX = RoundReal32ToInt32((pos.x - SQRT3 / 2 * world->scale));
+    int32 maxX = RoundReal32ToInt32((pos.x + SQRT3 / 2 * world->scale));
+    int32 minY = RoundReal32ToInt32((pos.y - world->scale));
+    int32 maxY = RoundReal32ToInt32((pos.y + world->scale));
 
     if (minX < 0)
     {
@@ -130,8 +121,8 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
         maxY = buffer->height;
     }
 
-    real32 v = world->metrics.outerRadius * world->scale / 2;
-    real32 h = world->metrics.innerRadius * world->scale;
+    real32 v = world->scale / 2;
+    real32 h = SQRT3 / 2 * world->scale;
 
     uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
@@ -159,11 +150,96 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
     }
 }
 
-inline Cell *GetCellByOffsetCoords(World *world, uint32 x, uint32 y)
+inline HexCoord HexFromOffset(OffsetCoord coord)
 {
-    Assert(x <= world->width && y <= world->height);
+    HexCoord result;
+    int32 parity = coord.y & 1;
 
-    return &world->cells[y * world->width + x];
+    result.q = coord.x - (coord.y - parity) / 2;
+    result.r = coord.y;
+    result.s = -result.q - result.r;
+
+    return result;
+}
+
+inline OffsetCoord OffsetFromHex(HexCoord hex)
+{
+    OffsetCoord result;
+    int32 parity = hex.r & 1;
+
+    result.x = hex.q + (hex.r - parity) / 2;
+    result.y = hex.r;
+
+    return result;
+}
+
+inline HexCoord V2ToHex(V2 pos)
+{
+    HexCoord result;
+
+    real32 q = SQRT3 / 3.0f * pos.x - 1.0f / 3.0f * pos.y;
+    real32 r = 2.0f / 3.0f * pos.y;
+    real32 s = -q - r;
+
+    result.q = RoundReal32ToInt32(q);
+    result.r = RoundReal32ToInt32(r);
+    result.s = RoundReal32ToInt32(s);
+
+    real32 diffQ = Abs(result.q - q);
+    real32 diffR = Abs(result.r - r);
+    real32 diffS = Abs(result.s - s);
+
+    if (diffQ > diffR && diffQ > diffS)
+    {
+        result.q = -result.r - result.s;
+    }
+    else if (diffR > diffS)
+    {
+        result.r = -result.q - result.s;
+    }
+    else
+    {
+        result.s = -result.q - result.r;
+    }
+
+    return result;
+}
+
+inline V2 HexToV2(HexCoord hex)
+{
+    V2 result;
+
+    result.x = SQRT3 * hex.q + SQRT3 / 2 * hex.r;
+    result.y = 1.5f * hex.r;
+
+    return result;
+}
+
+inline Cell *GetCellByOffset(World *world, OffsetCoord coord)
+{
+    if (coord.x < 0 || coord.x >= (int32)world->width || coord.y < 0 ||
+        coord.y >= (int32)world->height)
+    {
+        return 0;
+    }
+
+    return &world->cells[coord.y * world->width + coord.x];
+}
+
+inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x, uint32 y)
+{
+    V2 result;
+    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
+    World *world    = state->world;
+
+    result.x = (real32)x;
+    result.y = (real32)buffer->height - (real32)y;
+
+    result -= screenCenter;
+    result *= 1.0f / world->scale;
+    result += state->cameraPos;
+
+    return result;
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
@@ -179,20 +255,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->cameraPos = {8.5f, 4.0f};
         gameState->world     = PushStruct(&gameState->worldArena, World);
 
-        World *world               = gameState->world;
-        world->metrics.outerRadius = 1.0f;
-        world->metrics.innerRadius = world->metrics.outerRadius * 0.866025404f;
-
-        world->metrics.corners[0] = {0.0f, world->metrics.outerRadius};
-        world->metrics.corners[1] = {world->metrics.innerRadius, 0.5f * world->metrics.outerRadius};
-        world->metrics.corners[2] = {world->metrics.innerRadius,
-                                     -0.5f * world->metrics.outerRadius};
-        world->metrics.corners[3] = {0.0f, -world->metrics.outerRadius};
-        world->metrics.corners[4] = {-world->metrics.innerRadius,
-                                     -0.5f * world->metrics.outerRadius};
-        world->metrics.corners[5] = {-world->metrics.innerRadius,
-                                     0.5f * world->metrics.outerRadius};
-
+        World *world    = gameState->world;
         world->position = {};
         world->width    = 1000;
         world->height   = 800;
@@ -204,15 +267,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         uint32 counter = 0;
         Color c[3]     = {{0.25f, 0.25f, 0.25f}, {0.5f, 0.5f, 0.5f}, {0.75f, 0.75f, 0.75f}};
 
-        for (uint32 y = 0; y < world->height; y++)
+        for (int32 y = 0; y < world->height; y++)
         {
-            for (uint32 x = 0; x < world->width; x++)
+            for (int32 x = 0; x < world->width; x++)
             {
-                uint32 colorIndex = counter % 3;
-                cell->coord       = HexCoordFromOffsetCoord(x - y / 2, y);
-                cell->color       = c[colorIndex];
-                cell->position    = {(x + y * 0.5f - y / 2) * world->metrics.innerRadius * 2.0f,
-                                     y * world->metrics.outerRadius * 1.5f};
+                cell->coord    = HexFromOffset({x, y});
+                cell->color    = c[counter % 3];
+                cell->position = HexToV2(cell->coord);
 
                 cell++;
                 counter++;
@@ -253,25 +314,30 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height},
                   {1.0f, 0.0f, 1.0f});
 
-    World *world    = gameState->world;
-    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
+    World *world             = gameState->world;
+    V2 screenCenter          = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
+    HexCoord cameraHexPos    = V2ToHex(gameState->cameraPos);
+    OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
-    for (uint32 y = 0; y < 8; ++y)
+    for (int32 relY = -5; relY < 5; ++relY)
     {
-        for (uint32 x = 0; x < 12; ++x)
+        for (int32 relX = -7; relX < 7; ++relX)
         {
-            Cell *cell = GetCellByOffsetCoords(gameState->world, x, y);
+            int32 x = cameraOffset.x + relX;
+            int32 y = cameraOffset.y + relY;
 
-            V2 worldPos  = cell->position + world->position;
-            V2 screenPos = worldPos - gameState->cameraPos;
+            Cell *cell = GetCellByOffset(gameState->world, {x, y});
+            if (cell)
+            {
+                V2 cellWorldPos  = cell->position + world->position;
+                V2 cellScreenPos = cellWorldPos - gameState->cameraPos;
 
-            screenPos *= world->scale;
-            screenPos += screenCenter;
-            screenPos.y = buffer->height - screenPos.y;
+                cellScreenPos *= world->scale;
+                cellScreenPos += screenCenter;
+                cellScreenPos.y = buffer->height - cellScreenPos.y;
 
-            DrawCell(buffer, world, screenPos, cell->color);
-
-            cell++;
+                DrawCell(buffer, world, cellScreenPos, cell->color);
+            }
         }
     }
 }
