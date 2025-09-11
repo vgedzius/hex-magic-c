@@ -96,10 +96,12 @@ internal void GameOutputSound(GameState *gameState, GameSoundOutputBuffer *sound
 
 internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color color)
 {
-    int32 minX = RoundReal32ToInt32((pos.x - SQRT3 / 2 * world->scale));
-    int32 maxX = RoundReal32ToInt32((pos.x + SQRT3 / 2 * world->scale));
-    int32 minY = RoundReal32ToInt32((pos.y - world->scale));
-    int32 maxY = RoundReal32ToInt32((pos.y + world->scale));
+    real32 sqrt3 = Sqrt(3);
+
+    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * world->scale);
+    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * world->scale);
+    int32 minY = RoundReal32ToInt32(pos.y - world->scale);
+    int32 maxY = RoundReal32ToInt32(pos.y + world->scale);
 
     if (minX < 0)
     {
@@ -122,7 +124,7 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
     }
 
     real32 v = world->scale / 2;
-    real32 h = SQRT3 / 2 * world->scale;
+    real32 h = sqrt3 / 2 * world->scale;
 
     uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
@@ -175,37 +177,35 @@ inline OffsetCoord OffsetFromHex(HexCoord hex)
 
 inline HexCoord RoundHex(HexCoordF hex)
 {
-    HexCoord result;
+    int32 q = RoundReal32ToInt32(hex.q);
+    int32 r = RoundReal32ToInt32(hex.r);
+    int32 s = RoundReal32ToInt32(hex.s);
 
-    result.q = RoundReal32ToInt32(hex.q);
-    result.r = RoundReal32ToInt32(hex.r);
-    result.s = RoundReal32ToInt32(hex.s);
-
-    real32 diffQ = Abs(result.q - hex.q);
-    real32 diffR = Abs(result.r - hex.r);
-    real32 diffS = Abs(result.s - hex.s);
+    real32 diffQ = Abs(q - hex.q);
+    real32 diffR = Abs(r - hex.r);
+    real32 diffS = Abs(s - hex.s);
 
     if (diffQ > diffR && diffQ > diffS)
     {
-        result.q = -result.r - result.s;
+        q = -r - s;
     }
     else if (diffR > diffS)
     {
-        result.r = -result.q - result.s;
+        r = -q - s;
     }
     else
     {
-        result.s = -result.q - result.r;
+        s = -q - r;
     }
 
-    return result;
+    return HexCoord{q, r, s};
 }
 
 inline HexCoord V2ToHex(V2 pos)
 {
     HexCoordF result;
 
-    result.q = SQRT3 / 3.0f * pos.x - 1.0f / 3.0f * pos.y;
+    result.q = Sqrt(3) / 3.0f * pos.x - 1.0f / 3.0f * pos.y;
     result.r = 2.0f / 3.0f * pos.y;
     result.s = -result.q - result.r;
 
@@ -215,8 +215,9 @@ inline HexCoord V2ToHex(V2 pos)
 inline V2 HexToV2(HexCoord hex)
 {
     V2 result;
+    real32 sqrt3 = Sqrt(3);
 
-    result.x = SQRT3 * (real32)hex.q + SQRT3 / 2.0f * (real32)hex.r;
+    result.x = sqrt3 * (real32)hex.q + sqrt3 / 2.0f * (real32)hex.r;
     result.y = 1.5f * (real32)hex.r;
 
     return result;

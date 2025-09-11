@@ -1,3 +1,4 @@
+#include <cmath>
 #if !defined(HEX_MAGIC_INTRINSICS_H)
 
 #include <math.h>
@@ -46,6 +47,12 @@ inline real32 Cos(real32 angle)
 inline real32 Atan2(real32 y, real32 x)
 {
     real32 result = atan2f(y, x);
+    return result;
+}
+
+inline real32 Sqrt(real32 v)
+{
+    real32 result = sqrtf(v);
     return result;
 }
 
