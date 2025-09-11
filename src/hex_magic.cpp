@@ -181,15 +181,15 @@ inline HexCoord RoundHex(HexCoordF hex)
     int32 r = RoundReal32ToInt32(hex.r);
     int32 s = RoundReal32ToInt32(hex.s);
 
-    real32 diffQ = Abs(q - hex.q);
-    real32 diffR = Abs(r - hex.r);
-    real32 diffS = Abs(s - hex.s);
+    real32 qDiff = Abs(q - hex.q);
+    real32 rDiff = Abs(r - hex.r);
+    real32 sDiff = Abs(s - hex.s);
 
-    if (diffQ > diffR && diffQ > diffS)
+    if (qDiff > rDiff && qDiff > sDiff)
     {
         q = -r - s;
     }
-    else if (diffR > diffS)
+    else if (rDiff > sDiff)
     {
         r = -q - s;
     }
