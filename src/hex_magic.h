@@ -16,6 +16,11 @@ struct HexCoord
     int32 q, r, s;
 };
 
+struct HexCoordF
+{
+    real32 q, r, s;
+};
+
 struct OffsetCoord
 {
     int32 x, y;

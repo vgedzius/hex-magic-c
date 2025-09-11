@@ -173,21 +173,17 @@ inline OffsetCoord OffsetFromHex(HexCoord hex)
     return result;
 }
 
-inline HexCoord V2ToHex(V2 pos)
+inline HexCoord RoundHex(HexCoordF hex)
 {
     HexCoord result;
 
-    real32 q = SQRT3 / 3.0f * pos.x - 1.0f / 3.0f * pos.y;
-    real32 r = 2.0f / 3.0f * pos.y;
-    real32 s = -q - r;
+    result.q = RoundReal32ToInt32(hex.q);
+    result.r = RoundReal32ToInt32(hex.r);
+    result.s = RoundReal32ToInt32(hex.s);
 
-    result.q = RoundReal32ToInt32(q);
-    result.r = RoundReal32ToInt32(r);
-    result.s = RoundReal32ToInt32(s);
-
-    real32 diffQ = Abs(result.q - q);
-    real32 diffR = Abs(result.r - r);
-    real32 diffS = Abs(result.s - s);
+    real32 diffQ = Abs(result.q - hex.q);
+    real32 diffR = Abs(result.r - hex.r);
+    real32 diffS = Abs(result.s - hex.s);
 
     if (diffQ > diffR && diffQ > diffS)
     {
@@ -203,6 +199,17 @@ inline HexCoord V2ToHex(V2 pos)
     }
 
     return result;
+}
+
+inline HexCoord V2ToHex(V2 pos)
+{
+    HexCoordF result;
+
+    result.q = SQRT3 / 3.0f * pos.x - 1.0f / 3.0f * pos.y;
+    result.r = 2.0f / 3.0f * pos.y;
+    result.s = -result.q - result.r;
+
+    return RoundHex(result);
 }
 
 inline V2 HexToV2(HexCoord hex)
