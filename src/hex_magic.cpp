@@ -209,8 +209,8 @@ inline V2 HexToV2(HexCoord hex)
 {
     V2 result;
 
-    result.x = SQRT3 * hex.q + SQRT3 / 2 * hex.r;
-    result.y = 1.5f * hex.r;
+    result.x = SQRT3 * (real32)hex.q + SQRT3 / 2.0f * (real32)hex.r;
+    result.y = 1.5f * (real32)hex.r;
 
     return result;
 }
@@ -242,6 +242,10 @@ inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x,
     return result;
 }
 
+inline bool operator==(HexCoord a, HexCoord b) { return a.q == b.q && a.r == b.r && a.s == b.s; }
+
+inline bool operator!=(HexCoord a, HexCoord b) { return !(a == b); }
+
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 {
     Assert(sizeof(GameState) <= memory->permanentStorageSize);
@@ -257,8 +261,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
         World *world    = gameState->world;
         world->position = {};
-        world->width    = 1000;
-        world->height   = 800;
+        world->width    = 900;
+        world->height   = 600;
         world->scale    = 50.0f;
         world->cells    = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
@@ -272,7 +276,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             for (int32 x = 0; x < world->width; x++)
             {
                 cell->coord    = HexFromOffset({x, y});
-                cell->color    = c[counter % 3];
+                cell->color    = c[(y & 1 ? counter : counter + 1) % 3];
                 cell->position = HexToV2(cell->coord);
 
                 cell++;
@@ -340,9 +344,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 cellScreenPos += screenCenter;
                 cellScreenPos.y = buffer->height - cellScreenPos.y;
 
-                Color color = mouseHexPos.q == cell->coord.q && mouseHexPos.r == cell->coord.r
-                                  ? hoverColor
-                                  : cell->color;
+                Color color = mouseHexPos == cell->coord ? hoverColor : cell->color;
 
                 DrawCell(buffer, world, cellScreenPos, color);
             }
