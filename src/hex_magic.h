@@ -51,12 +51,18 @@ struct World
     Cell *selectedCell;
 };
 
+struct Camera
+{
+    V2 position;
+    real32 speed;
+};
+
 struct GameState
 {
     MemoryArena worldArena;
     World *world;
 
-    V2 cameraPos;
+    Camera camera;
 };
 
 #define HEX_MAGIC_H

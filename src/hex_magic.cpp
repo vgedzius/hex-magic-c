@@ -245,7 +245,7 @@ inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x,
 
     result -= screenCenter;
     result *= 1.0f / world->scale;
-    result += state->cameraPos;
+    result += state->camera.position;
 
     return result;
 }
@@ -264,8 +264,10 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         InitializeArena(&gameState->worldArena, memory->permanentStorageSize - sizeof(GameState),
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
-        gameState->cameraPos = {8.5f, 4.0f};
-        gameState->world     = PushStruct(&gameState->worldArena, World);
+        gameState->camera.position = {8.5f, 4.0f};
+        gameState->camera.speed    = 1.5f;
+
+        gameState->world = PushStruct(&gameState->worldArena, World);
 
         World *world        = gameState->world;
         world->position     = {};
@@ -296,32 +298,40 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         memory->isInitialized = true;
     }
 
-    real32 cameraMoveSpeed = 5.0f * input->dtForFrame;
-
     for (uint32 controllerIndex = 0; controllerIndex < ArrayCount(input->controllers);
          ++controllerIndex)
     {
         GameControllerInput *controller = GetController(input, controllerIndex);
+        V2 dCamera;
 
         if (controller->moveDown.endedDown)
         {
-            gameState->cameraPos.y -= cameraMoveSpeed;
+            dCamera.y -= 1.0f;
         }
 
         if (controller->moveUp.endedDown)
         {
-            gameState->cameraPos.y += cameraMoveSpeed;
+            dCamera.y += 1.0f;
         }
 
         if (controller->moveLeft.endedDown)
         {
-            gameState->cameraPos.x -= cameraMoveSpeed;
+            dCamera.x -= 1.0f;
         }
 
         if (controller->moveRight.endedDown)
         {
-            gameState->cameraPos.x += cameraMoveSpeed;
+            dCamera.x += 1.0f;
         }
+
+        dCamera *= gameState->camera.speed;
+
+        if ((dCamera.x != 0.0f) && (dCamera.y != 0.0f))
+        {
+            dCamera *= 0.707106781187f;
+        }
+
+        gameState->camera.position += input->dtForFrame * dCamera;
     }
 
     DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height},
@@ -329,7 +339,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     World *world             = gameState->world;
     V2 screenCenter          = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
-    HexCoord cameraHexPos    = V2ToHex(gameState->cameraPos);
+    HexCoord cameraHexPos    = V2ToHex(gameState->camera.position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
     V2 mouseWorldPos     = ScreenToWorld(buffer, gameState, input->mouseX, input->mouseY);
@@ -354,7 +364,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             if (cell)
             {
                 V2 cellWorldPos  = cell->position + world->position;
-                V2 cellScreenPos = cellWorldPos - gameState->cameraPos;
+                V2 cellScreenPos = cellWorldPos - gameState->camera.position;
 
                 cellScreenPos *= world->scale;
                 cellScreenPos += screenCenter;
