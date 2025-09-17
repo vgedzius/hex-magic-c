@@ -48,6 +48,7 @@ struct World
     int32 height;
 
     Cell *cells;
+    Cell *selectedCell;
 };
 
 struct GameState

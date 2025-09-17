@@ -267,12 +267,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->cameraPos = {8.5f, 4.0f};
         gameState->world     = PushStruct(&gameState->worldArena, World);
 
-        World *world    = gameState->world;
-        world->position = {};
-        world->width    = 900;
-        world->height   = 600;
-        world->scale    = 50.0f;
-        world->cells    = PushArray(&gameState->worldArena, world->width * world->height, Cell);
+        World *world        = gameState->world;
+        world->position     = {};
+        world->width        = 900;
+        world->height       = 600;
+        world->scale        = 50.0f;
+        world->selectedCell = 0;
+        world->cells        = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
         Cell *cell = world->cells;
 
@@ -333,7 +334,14 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     V2 mouseWorldPos     = ScreenToWorld(buffer, gameState, input->mouseX, input->mouseY);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
-    Color hoverColor     = {1.0f, 1.0f, 1.0f};
+
+    Color hoverColor    = {1.0f, 1.0f, 1.0f};
+    Color selectedColor = {1.0f, 0.0f, 0.0f};
+
+    if (input->mouseButtons[0].endedDown)
+    {
+        world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+    }
 
     for (int32 relY = -5; relY < 5; ++relY)
     {
@@ -352,7 +360,19 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 cellScreenPos += screenCenter;
                 cellScreenPos.y = buffer->height - cellScreenPos.y;
 
-                Color color = mouseHexPos == cell->coord ? hoverColor : cell->color;
+                Color color;
+                if (world->selectedCell && world->selectedCell->coord == cell->coord)
+                {
+                    color = selectedColor;
+                }
+                else if (mouseHexPos == cell->coord)
+                {
+                    color = hoverColor;
+                }
+                else
+                {
+                    color = cell->color;
+                }
 
                 DrawCell(buffer, world, cellScreenPos, color);
             }
