@@ -87,5 +87,12 @@ inline uint32 Abs(int32 v)
     return result;
 }
 
+inline real32 Square(real32 v)
+{
+    real32 result = v * v;
+
+    return result;
+}
+
 #define HEX_MAGIC_MATH_H
 #endif

@@ -265,7 +265,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
         gameState->camera.position = {8.5f, 4.0f};
-        gameState->camera.speed    = 1.5f;
+        gameState->camera.velocity = {};
+        gameState->camera.speed    = 20.0f;
 
         gameState->world = PushStruct(&gameState->worldArena, World);
 
@@ -302,36 +303,41 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
          ++controllerIndex)
     {
         GameControllerInput *controller = GetController(input, controllerIndex);
-        V2 dCamera;
+        V2 ddCamera                     = {};
 
         if (controller->moveDown.endedDown)
         {
-            dCamera.y -= 1.0f;
+            ddCamera.y -= 1.0f;
         }
 
         if (controller->moveUp.endedDown)
         {
-            dCamera.y += 1.0f;
+            ddCamera.y += 1.0f;
         }
 
         if (controller->moveLeft.endedDown)
         {
-            dCamera.x -= 1.0f;
+            ddCamera.x -= 1.0f;
         }
 
         if (controller->moveRight.endedDown)
         {
-            dCamera.x += 1.0f;
+            ddCamera.x += 1.0f;
         }
 
-        dCamera *= gameState->camera.speed;
-
-        if ((dCamera.x != 0.0f) && (dCamera.y != 0.0f))
+        if ((ddCamera.x != 0.0f) && (ddCamera.y != 0.0f))
         {
-            dCamera *= 0.707106781187f;
+            ddCamera *= 0.707106781187f;
         }
 
-        gameState->camera.position += input->dtForFrame * dCamera;
+        Camera *camera = &gameState->camera;
+
+        ddCamera *= camera->speed;
+        ddCamera += -2.0f * camera->velocity;
+
+        camera->position = 0.5f * ddCamera * Square(input->dtForFrame) +
+                           camera->velocity * input->dtForFrame + camera->position;
+        camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
     }
 
     DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height},
@@ -355,7 +361,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     for (int32 relY = -5; relY < 5; ++relY)
     {
-        for (int32 relX = -7; relX < 7; ++relX)
+        for (int32 relX = -8; relX < 8; ++relX)
         {
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;

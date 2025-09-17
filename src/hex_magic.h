@@ -54,6 +54,8 @@ struct World
 struct Camera
 {
     V2 position;
+    V2 velocity;
+
     real32 speed;
 };
 
