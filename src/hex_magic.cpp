@@ -266,7 +266,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
         gameState->camera.position = {8.5f, 4.0f};
         gameState->camera.velocity = {};
-        gameState->camera.speed    = 20.0f;
+        gameState->camera.speed    = 100.0f;
 
         gameState->world = PushStruct(&gameState->worldArena, World);
 
@@ -299,46 +299,46 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         memory->isInitialized = true;
     }
 
-    for (uint32 controllerIndex = 0; controllerIndex < ArrayCount(input->controllers);
-         ++controllerIndex)
+    int32 mouseControlZone = 50;
+
+    GameControllerInput *controller = GetController(input, 0);
+    V2 ddCamera                     = {};
+
+    printf("ended down? %d\n", controller->moveUp.endedDown);
+
+    if (controller->moveDown.endedDown || input->mouseY > buffer->height - mouseControlZone)
     {
-        GameControllerInput *controller = GetController(input, controllerIndex);
-        V2 ddCamera                     = {};
-
-        if (controller->moveDown.endedDown)
-        {
-            ddCamera.y -= 1.0f;
-        }
-
-        if (controller->moveUp.endedDown)
-        {
-            ddCamera.y += 1.0f;
-        }
-
-        if (controller->moveLeft.endedDown)
-        {
-            ddCamera.x -= 1.0f;
-        }
-
-        if (controller->moveRight.endedDown)
-        {
-            ddCamera.x += 1.0f;
-        }
-
-        if ((ddCamera.x != 0.0f) && (ddCamera.y != 0.0f))
-        {
-            ddCamera *= 0.707106781187f;
-        }
-
-        Camera *camera = &gameState->camera;
-
-        ddCamera *= camera->speed;
-        ddCamera += -2.0f * camera->velocity;
-
-        camera->position = 0.5f * ddCamera * Square(input->dtForFrame) +
-                           camera->velocity * input->dtForFrame + camera->position;
-        camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
+        ddCamera.y = -1.0f;
     }
+
+    if (controller->moveUp.endedDown || input->mouseY < mouseControlZone)
+    {
+        ddCamera.y = 1.0f;
+    }
+
+    if (controller->moveLeft.endedDown || input->mouseX < mouseControlZone)
+    {
+        ddCamera.x = -1.0f;
+    }
+
+    if (controller->moveRight.endedDown || input->mouseX > buffer->width - mouseControlZone)
+    {
+        ddCamera.x = 1.0f;
+    }
+
+    if ((ddCamera.x != 0.0f) && (ddCamera.y != 0.0f))
+    {
+        ddCamera *= 0.707106781187f;
+    }
+
+    Camera *camera = &gameState->camera;
+
+    ddCamera *= camera->speed;
+    ddCamera += -10.0f * camera->velocity;
+
+    camera->position = 0.5f * ddCamera * Square(input->dtForFrame) +
+                       camera->velocity * input->dtForFrame + camera->position;
+    camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
 
     DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height},
                   {1.0f, 0.0f, 1.0f});

@@ -1096,7 +1096,7 @@ int main(int argc, char *args[])
 
             if (currentSecond > 1.0f)
             {
-                printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
+                // printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
 
                 currentSecond = 0.0f;
                 fps           = 0;
