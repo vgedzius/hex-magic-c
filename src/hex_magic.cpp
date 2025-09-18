@@ -223,7 +223,7 @@ inline V2 HexToV2(HexCoord hex)
     return result;
 }
 
-inline Cell *GetCellByOffset(World *world, OffsetCoord coord)
+inline HexCell *GetCellByOffset(World *world, OffsetCoord coord)
 {
     if (coord.x < 0 || coord.x >= (int32)world->width || coord.y < 0 ||
         coord.y >= (int32)world->height)
@@ -264,6 +264,64 @@ inline bool32 operator!=(HexCoord a, HexCoord b)
     return result;
 }
 
+inline Color BiomeColor(Biome biome)
+{
+    Color result;
+
+    switch (biome)
+    {
+        case GRASS:
+        {
+            result = {0.18039215686f, 0.2862745098f, 0.10980392157f};
+        }
+        break;
+
+        case DIRT:
+        {
+            result = {0.38431372549f, 0.28235294118f, 0.18039215686f};
+        }
+        break;
+
+        case LAVA:
+        {
+            result = {0.20784313725f, 0.18039215686f, 0.18039215686f};
+        }
+        break;
+
+        case ROUGH:
+        {
+            result = {0.48235294118f, 0.37254901961f, 0.27450980392f};
+        }
+        break;
+
+        case SAND:
+        {
+            result = {0.76470588235f, 0.63137254902f, 0.47450980392f};
+        }
+        break;
+
+        case SNOW:
+        {
+            result = {0.92549019608f, 0.93725490196f, 0.93725490196f};
+        }
+        break;
+
+        case WATER:
+        {
+            result = {0.06274509804f, 0.17647058824f, 0.30196078431f};
+        }
+        break;
+
+        case ROCK:
+        {
+            result = {0.36862745098f, 0.19607843137f, 0.07843137255f};
+        }
+        break;
+    }
+
+    return result;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 {
     Assert(sizeof(GameState) <= memory->permanentStorageSize);
@@ -286,23 +344,19 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->height       = 600;
         world->scale        = 75.0f;
         world->selectedCell = 0;
-        world->cells        = PushArray(&gameState->worldArena, world->width * world->height, Cell);
+        world->cells = PushArray(&gameState->worldArena, world->width * world->height, HexCell);
 
-        Cell *cell = world->cells;
-
-        uint32 counter = 0;
-        Color c[3]     = {{0.25f, 0.25f, 0.25f}, {0.5f, 0.5f, 0.5f}, {0.75f, 0.75f, 0.75f}};
+        HexCell *cell = world->cells;
 
         for (int32 y = 0; y < world->height; y++)
         {
             for (int32 x = 0; x < world->width; x++)
             {
                 cell->coord    = HexFromOffset({x, y});
-                cell->color    = c[(y & 1 ? counter : counter + 1) % 3];
+                cell->biome    = WATER;
                 cell->position = HexToV2(cell->coord);
 
                 cell++;
-                counter++;
             }
         }
 
@@ -367,14 +421,14 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
     }
 
-    for (int32 relY = -6; relY < 6; ++relY)
+    for (int32 relY = -5; relY < 5; ++relY)
     {
-        for (int32 relX = -11; relX < 11; ++relX)
+        for (int32 relX = -7; relX < 7; ++relX)
         {
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;
 
-            Cell *cell = GetCellByOffset(gameState->world, {x, y});
+            HexCell *cell = GetCellByOffset(gameState->world, {x, y});
             if (cell)
             {
                 V2 cellWorldPos  = cell->position + world->position;
@@ -395,7 +449,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
                 else
                 {
-                    color = cell->color;
+                    color = BiomeColor(cell->biome);
                 }
 
                 DrawCell(buffer, world, cellScreenPos, color);

@@ -31,12 +31,24 @@ struct Color
     real32 r, g, b;
 };
 
-struct Cell
+enum Biome
+{
+    GRASS,
+    DIRT,
+    LAVA,
+    ROUGH,
+    SAND,
+    SNOW,
+    WATER,
+    ROCK
+};
+
+struct HexCell
 {
     HexCoord coord;
     V2 position;
 
-    Color color;
+    Biome biome;
 };
 
 struct World
@@ -47,8 +59,8 @@ struct World
     int32 width;
     int32 height;
 
-    Cell *cells;
-    Cell *selectedCell;
+    HexCell *cells;
+    HexCell *selectedCell;
 };
 
 struct Camera
