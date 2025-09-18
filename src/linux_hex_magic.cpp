@@ -164,9 +164,7 @@ internal void LinuxDisplayBufferInWindow(LinuxState *state, LinuxOffscreenBuffer
     }
     else
     {
-        destRect   = sourceRect;
-        destRect.x = 10;
-        destRect.y = 10;
+        destRect = sourceRect;
     }
 
     SDL_RenderCopy(renderer, buffer->renderTexture, &sourceRect, &destRect);
@@ -747,8 +745,8 @@ int main(int argc, char *args[])
     LinuxState linuxState = {};
 
     globalPerfCountFrequency = SDL_GetPerformanceFrequency();
-    int initWidth            = 960;
-    int initHeight           = 540;
+    int initWidth            = 1280;
+    int initHeight           = 720;
 
     LinuxGetExecutableFileName(&linuxState, args);
 
@@ -759,8 +757,8 @@ int main(int argc, char *args[])
     }
 
     SDL_Window *window =
-        SDL_CreateWindow("Hex magic", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                         initWidth + 20, initHeight + 20, SDL_WINDOW_RESIZABLE);
+        SDL_CreateWindow("Hex magic", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, initWidth,
+                         initHeight, SDL_WINDOW_RESIZABLE);
 
     if (!window)
     {
@@ -1096,7 +1094,7 @@ int main(int argc, char *args[])
 
             if (currentSecond > 1.0f)
             {
-                // printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
+                printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
 
                 currentSecond = 0.0f;
                 fps           = 0;

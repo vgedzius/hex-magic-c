@@ -250,9 +250,19 @@ inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x,
     return result;
 }
 
-inline bool operator==(HexCoord a, HexCoord b) { return a.q == b.q && a.r == b.r && a.s == b.s; }
+inline bool32 operator==(HexCoord a, HexCoord b)
+{
+    bool32 result = a.q == b.q && a.r == b.r && a.s == b.s;
 
-inline bool operator!=(HexCoord a, HexCoord b) { return !(a == b); }
+    return result;
+}
+
+inline bool32 operator!=(HexCoord a, HexCoord b)
+{
+    bool32 result = !(a == b);
+
+    return result;
+}
 
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 {
@@ -274,7 +284,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->position     = {};
         world->width        = 900;
         world->height       = 600;
-        world->scale        = 50.0f;
+        world->scale        = 75.0f;
         world->selectedCell = 0;
         world->cells        = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
@@ -303,8 +313,6 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     GameControllerInput *controller = GetController(input, 0);
     V2 ddCamera                     = {};
-
-    printf("ended down? %d\n", controller->moveUp.endedDown);
 
     if (controller->moveDown.endedDown || input->mouseY > buffer->height - mouseControlZone)
     {
@@ -359,9 +367,9 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
     }
 
-    for (int32 relY = -5; relY < 5; ++relY)
+    for (int32 relY = -6; relY < 6; ++relY)
     {
-        for (int32 relX = -8; relX < 8; ++relX)
+        for (int32 relX = -11; relX < 11; ++relX)
         {
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;
