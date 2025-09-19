@@ -396,7 +396,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 #if HEX_MAGIC_INTERNAL
     if (WasPressed(controller->toggleMode))
     {
-        gameState->mode = gameState->mode == EDIT ? PLAY : EDIT;
+        gameState->mode     = gameState->mode == EDIT ? PLAY : EDIT;
+        world->selectedCell = 0;
     }
 
     if (WasPressed(controller->nextBiome))
@@ -419,6 +420,11 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         }
     }
 #endif
+
+    if (WasPressed(controller->cancel))
+    {
+        world->selectedCell = 0;
+    }
 
     if (IsHeld(controller->moveDown) || input->mouseY > buffer->height - mouseControlZone)
     {

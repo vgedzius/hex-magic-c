@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_keycode.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -577,14 +578,6 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     {
                         LinuxProcessKeyboardMessage(&keyboardController->moveRight, isDown);
                     }
-                    else if (vkCode == 'e')
-                    {
-                        LinuxProcessKeyboardMessage(&keyboardController->toggleMode, isDown);
-                    }
-                    else if (vkCode == 'b')
-                    {
-                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
-                    }
                     else if (vkCode == SDLK_UP)
                     {
                         LinuxProcessKeyboardMessage(&keyboardController->moveUp, isDown);
@@ -605,7 +598,19 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     {
                         ToggleFullscreen(state, window);
                     }
+                    else if (vkCode == 'b')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
+                    }
+                    else if (vkCode == SDLK_ESCAPE)
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->cancel, isDown);
+                    }
 #if HEX_MAGIC_INTERNAL
+                    else if (vkCode == 'e')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->toggleMode, isDown);
+                    }
                     else if (vkCode == 'p')
                     {
                         if (isDown)
