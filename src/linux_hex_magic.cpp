@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_render.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -776,7 +777,8 @@ int main(int argc, char *args[])
         return 1;
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Renderer *renderer =
+        SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     if (!renderer)
     {
@@ -873,10 +875,11 @@ int main(int argc, char *args[])
     GameInput *newInput = &input[0];
     GameInput *oldInput = &input[1];
 
-    uint64 lastCounter   = SDL_GetPerformanceCounter();
-    uint64 flpWallClock  = SDL_GetPerformanceCounter();
-    uint32 fps           = 0;
-    real64 currentSecond = 0.0f;
+    uint64 lastCounter     = SDL_GetPerformanceCounter();
+    uint64 flpWallClock    = SDL_GetPerformanceCounter();
+    uint32 fps             = 0;
+    real64 currentSecond   = 0.0f;
+    real32 secondsPerFrame = 0.0f;
 
     uint32 debugTimeMarkerIndex               = 0;
     LinuxDebugTimeMarker debugTimeMarkers[30] = {};
@@ -903,7 +906,7 @@ int main(int argc, char *args[])
             SDL_ShowCursor(SDL_DISABLE);
         }
 
-        newInput->dtForFrame = targetSecondsPerFrame;
+        newInput->dtForFrame = secondsPerFrame;
 
         struct timespec newGameCodeWriteTime = LinuxGetLastWriteTime(gameSoName);
         if (newGameCodeWriteTime.tv_sec != game.lastWriteTime.tv_sec)
@@ -1055,42 +1058,10 @@ int main(int argc, char *args[])
 #endif
             LinuxFillSoundBuffer(&soundOutput, &soundBuffer, byteToLock, bytesToWrite);
 
-            uint64 workCounter        = SDL_GetPerformanceCounter();
-            real32 workSecondsElapsed = LinuxGetSecondsElapsed(lastCounter, workCounter);
-
-            real32 secondsElapsedForFrame = workSecondsElapsed;
-            if (secondsElapsedForFrame < targetSecondsPerFrame)
-            {
-                uint32 sleepMs =
-                    ((uint32)(1000.0f * (targetSecondsPerFrame - secondsElapsedForFrame))) - 1;
-
-                if (sleepMs > 0)
-                {
-                    SDL_Delay(sleepMs);
-                }
-
-                real32 testSecondsElapsedForFrame =
-                    LinuxGetSecondsElapsed(lastCounter, SDL_GetPerformanceCounter());
-                if (testSecondsElapsedForFrame < targetSecondsPerFrame)
-                {
-                    // TODO log missed sleep
-                }
-
-                while (secondsElapsedForFrame < targetSecondsPerFrame)
-                {
-                    secondsElapsedForFrame =
-                        LinuxGetSecondsElapsed(lastCounter, SDL_GetPerformanceCounter());
-                }
-            }
-            else
-            {
-                // TODO skipped the frame, we should know about this
-            }
-
-            uint64 endCounter      = SDL_GetPerformanceCounter();
-            real64 secondsPerFrame = LinuxGetSecondsElapsed(lastCounter, endCounter);
-            real64 msPerFrame      = secondsPerFrame * 1000.0f;
-            lastCounter            = endCounter;
+            uint64 endCounter = SDL_GetPerformanceCounter();
+            secondsPerFrame   = LinuxGetSecondsElapsed(lastCounter, endCounter);
+            real64 msPerFrame = secondsPerFrame * 1000.0f;
+            lastCounter       = endCounter;
 
             currentSecond += secondsPerFrame;
             fps++;
