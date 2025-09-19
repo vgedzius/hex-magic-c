@@ -322,6 +322,27 @@ inline Color BiomeColor(Biome biome)
     return result;
 }
 
+inline bool32 WasPressed(GameButtonState button)
+{
+    bool32 result = button.endedDown && button.halfTransitionCount > 0;
+
+    return result;
+}
+
+inline bool32 WasReleased(GameButtonState button)
+{
+    bool32 result = !button.endedDown && button.halfTransitionCount > 0;
+
+    return result;
+}
+
+inline bool32 IsHeld(GameButtonState button)
+{
+    bool32 result = button.endedDown;
+
+    return result;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 {
     Assert(sizeof(GameState) <= memory->permanentStorageSize);
@@ -373,12 +394,12 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     V2 ddCamera                     = {};
 
 #if HEX_MAGIC_INTERNAL
-    if (controller->toggleMode.endedDown)
+    if (WasPressed(controller->toggleMode))
     {
         gameState->mode = gameState->mode == EDIT ? PLAY : EDIT;
     }
 
-    if (controller->nextBiome.endedDown)
+    if (WasPressed(controller->nextBiome))
     {
         if (!editor->selectedBiome)
         {
@@ -399,22 +420,22 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     }
 #endif
 
-    if (controller->moveDown.endedDown || input->mouseY > buffer->height - mouseControlZone)
+    if (IsHeld(controller->moveDown) || input->mouseY > buffer->height - mouseControlZone)
     {
         ddCamera.y = -1.0f;
     }
 
-    if (controller->moveUp.endedDown || input->mouseY < mouseControlZone)
+    if (IsHeld(controller->moveUp) || input->mouseY < mouseControlZone)
     {
         ddCamera.y = 1.0f;
     }
 
-    if (controller->moveLeft.endedDown || input->mouseX < mouseControlZone)
+    if (IsHeld(controller->moveLeft) || input->mouseX < mouseControlZone)
     {
         ddCamera.x = -1.0f;
     }
 
-    if (controller->moveRight.endedDown || input->mouseX > buffer->width - mouseControlZone)
+    if (IsHeld(controller->moveRight) || input->mouseX > buffer->width - mouseControlZone)
     {
         ddCamera.x = 1.0f;
     }
@@ -459,7 +480,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     Color hoverColor    = {1.0f, 1.0f, 1.0f};
     Color selectedColor = {1.0f, 0.0f, 0.0f};
 
-    if (input->mouseButtons[0].endedDown)
+    if (WasPressed(input->mouseButtons[0]))
     {
         if (gameState->mode == PLAY)
         {

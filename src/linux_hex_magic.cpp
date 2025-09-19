@@ -1,5 +1,4 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_render.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -640,75 +639,65 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
             case SDL_KEYUP:
             {
                 SDL_Keycode vkCode = e.key.keysym.sym;
+                bool32 isDown      = e.key.state == SDL_PRESSED;
 
                 if (!e.key.repeat)
                 {
                     if (vkCode == 'w')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveUp,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveUp, isDown);
                     }
                     else if (vkCode == 'a')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveLeft,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveLeft, isDown);
                     }
                     else if (vkCode == 's')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveDown,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveDown, isDown);
                     }
                     else if (vkCode == 'd')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveRight,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveRight, isDown);
                     }
                     else if (vkCode == 'e')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->toggleMode,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->toggleMode, isDown);
                     }
-                    else if (vkCode == 'n')
+                    else if (vkCode == 'b')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
                     }
                     else if (vkCode == SDLK_UP)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveUp,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveUp, isDown);
                     }
                     else if (vkCode == SDLK_LEFT)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveLeft,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveLeft, isDown);
                     }
                     else if (vkCode == SDLK_DOWN)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveDown,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveDown, isDown);
                     }
                     else if (vkCode == SDLK_RIGHT)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveRight,
-                                                    e.key.state == SDL_PRESSED);
+                        LinuxProcessKeyboardMessage(&keyboardController->moveRight, isDown);
                     }
-                    else if (vkCode == SDLK_RETURN && e.key.state == SDL_PRESSED &&
-                             (e.key.keysym.mod & KMOD_ALT))
+                    else if (vkCode == SDLK_RETURN && isDown && (e.key.keysym.mod & KMOD_ALT))
                     {
                         ToggleFullscreen(state, window);
                     }
 #if HEX_MAGIC_INTERNAL
                     else if (vkCode == 'p')
                     {
-                        if (e.key.state == SDL_PRESSED)
+                        if (isDown)
                         {
                             globalPause = !globalPause;
                         }
                     }
                     else if (vkCode == 'l')
                     {
-                        if (e.key.state == SDL_PRESSED)
+                        if (isDown)
                         {
                             if (state->inputPlayingIndex == 0)
                             {
@@ -1047,7 +1036,8 @@ int main(int argc, char *args[])
             //     unwrappedWriteCursor += soundOutput.secondaryBufferSize;
             // }
             // audioLatencyBytes   = unwrappedWriteCursor - audioBuffer.playCursor;
-            // audioLatencySeconds = (real32)audioLatencyBytes / (real32)soundOutput.bytesPerSample
+            // audioLatencySeconds = (real32)audioLatencyBytes /
+            // (real32)soundOutput.bytesPerSample
             // /
             //                       (real32)soundOutput.samplesPerSecond;
             //
@@ -1083,8 +1073,8 @@ int main(int argc, char *args[])
 
             {
                 // LinuxDebugSyncDisplay(&globalBackBuffer, ArrayCount(debugTimeMarkers),
-                //                       debugTimeMarkers, debugTimeMarkerIndex - 1, &soundOutput,
-                //                       targetSecondsPerFrame);
+                //                       debugTimeMarkers, debugTimeMarkerIndex - 1,
+                //                       &soundOutput, targetSecondsPerFrame);
             }
 #endif
 
