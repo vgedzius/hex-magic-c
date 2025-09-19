@@ -598,18 +598,26 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     {
                         ToggleFullscreen(state, window);
                     }
-                    else if (vkCode == 'b')
-                    {
-                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
-                    }
                     else if (vkCode == SDLK_ESCAPE)
                     {
                         LinuxProcessKeyboardMessage(&keyboardController->cancel, isDown);
                     }
 #if HEX_MAGIC_INTERNAL
+                    else if (vkCode == 'l')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->load, isDown);
+                    }
+                    else if (vkCode == 'm')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->save, isDown);
+                    }
                     else if (vkCode == 'e')
                     {
                         LinuxProcessKeyboardMessage(&keyboardController->toggleMode, isDown);
+                    }
+                    else if (vkCode == 'b')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
                     }
                     else if (vkCode == 'p')
                     {

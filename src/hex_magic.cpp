@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include <cstring>
 #include "hex_magic.h"
 #include "hex_magic_intrinsics.h"
 #include "hex_magic_platform.h"
@@ -417,6 +418,21 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             {
                 editor->selectedBiome = (Biome)(editor->selectedBiome + 1);
             }
+        }
+    }
+
+    if (WasPressed(controller->save))
+    {
+        memory->debugPlatformWriteEntireFile(thread, "world.map", gameState->worldArena.size,
+                                             world);
+    }
+
+    if (WasPressed(controller->load))
+    {
+        DebugReadFileResult result = memory->debugPlatformReadEntireFile(thread, "world.map");
+        if (result.contentsSize)
+        {
+            memcpy(world, result.contents, result.contentsSize);
         }
     }
 #endif
