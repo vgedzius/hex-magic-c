@@ -65,13 +65,6 @@ struct LinuxState
 {
     uint64 totalSize;
     void *gameMemoryBlock;
-    LinuxReplayBuffer replayBuffers[4];
-
-    int recordingHandle;
-    int inputRecordingIndex;
-
-    int playbackHandle;
-    int inputPlayingIndex;
 
     char *executableFileName;
     char *onePastLastExecFileNameSlash;

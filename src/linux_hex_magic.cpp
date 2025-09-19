@@ -509,88 +509,6 @@ internal void LinuxUnloadGameCode(LinuxGameCode *gameCode)
     }
 }
 
-internal void LinuxGetInputFileLocation(LinuxState *state, bool32 inputStream, int slotIndex,
-                                        int destCount, char *dest)
-{
-    char temp[64];
-    snprintf(temp, 64, "loop_edit_%d_%s.hmi", slotIndex, inputStream ? "input" : "state");
-    LinuxBuildExecDirFileName(state, temp, destCount, dest);
-}
-
-internal LinuxReplayBuffer *LinuxGetReplayBuffer(LinuxState *state, int unsigned index)
-{
-    Assert(index > 0);
-    Assert(index < ArrayCount(state->replayBuffers));
-    LinuxReplayBuffer *result = &state->replayBuffers[index];
-
-    return result;
-}
-
-internal void LinuxBeginRecordingInput(LinuxState *state, int recordingIndex)
-{
-    LinuxReplayBuffer *replayBuffer = LinuxGetReplayBuffer(state, recordingIndex);
-
-    if (replayBuffer->memoryBlock)
-    {
-        state->inputRecordingIndex = recordingIndex;
-
-        char fileName[PATH_MAX];
-        LinuxGetInputFileLocation(state, true, recordingIndex, sizeof(fileName), fileName);
-        state->recordingHandle =
-            open(fileName, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-        memcpy(replayBuffer->memoryBlock, state->gameMemoryBlock, state->totalSize);
-    }
-}
-
-internal void LinuxEndRecordingInput(LinuxState *state)
-{
-    close(state->recordingHandle);
-    state->inputRecordingIndex = 0;
-}
-
-internal void LinuxBeginInputPlayback(LinuxState *state, int playbackIndex)
-{
-    LinuxReplayBuffer *replayBuffer = LinuxGetReplayBuffer(state, playbackIndex);
-
-    if (replayBuffer->memoryBlock)
-    {
-        state->inputPlayingIndex = playbackIndex;
-
-        char fileName[PATH_MAX];
-        LinuxGetInputFileLocation(state, true, playbackIndex, sizeof(fileName), fileName);
-        state->playbackHandle = open(fileName, O_RDONLY);
-
-        memcpy(state->gameMemoryBlock, replayBuffer->memoryBlock, state->totalSize);
-    }
-}
-
-internal void LinuxEndInputPlayback(LinuxState *state)
-{
-    close(state->playbackHandle);
-    state->inputPlayingIndex = 0;
-}
-
-internal void LinuxRecordInput(LinuxState *state, GameInput *input)
-{
-    write(state->recordingHandle, input, sizeof(*input));
-}
-
-internal void LinuxPlaybackInput(LinuxState *state, GameInput *input)
-{
-    ssize_t bytesRead = read(state->playbackHandle, input, sizeof(*input));
-
-    if (bytesRead == 0)
-    {
-        int playingIndex = state->inputPlayingIndex;
-
-        LinuxEndInputPlayback(state);
-        LinuxBeginInputPlayback(state, playingIndex);
-
-        read(state->playbackHandle, input, sizeof(*input));
-    }
-}
-
 void ToggleFullscreen(LinuxState *state, SDL_Window *window)
 {
     uint32 fullscreenFlag        = SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -693,28 +611,6 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                         if (isDown)
                         {
                             globalPause = !globalPause;
-                        }
-                    }
-                    else if (vkCode == 'l')
-                    {
-                        if (isDown)
-                        {
-                            if (state->inputPlayingIndex == 0)
-                            {
-                                if (state->inputRecordingIndex == 0)
-                                {
-                                    LinuxBeginRecordingInput(state, 1);
-                                }
-                                else
-                                {
-                                    LinuxEndRecordingInput(state);
-                                    LinuxBeginInputPlayback(state, 1);
-                                }
-                            }
-                            else
-                            {
-                                LinuxEndInputPlayback(state);
-                            }
                         }
                     }
 #endif
@@ -832,28 +728,6 @@ int main(int argc, char *args[])
     gameMemory.transientStorage =
         (uint8 *)gameMemory.permanentStorage + gameMemory.permanentStorageSize;
 
-    for (uint32 replayIndex = 1; replayIndex < ArrayCount(linuxState.replayBuffers); ++replayIndex)
-    {
-        LinuxReplayBuffer *replayBuffer = &linuxState.replayBuffers[replayIndex];
-
-        LinuxGetInputFileLocation(&linuxState, false, replayIndex, sizeof(replayBuffer->fileName),
-                                  replayBuffer->fileName);
-
-        replayBuffer->fileHandle = open(replayBuffer->fileName, O_RDWR | O_TRUNC | O_CREAT,
-                                        S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-        replayBuffer->memoryBlock = mmap(0, (size_t)linuxState.totalSize, PROT_READ | PROT_WRITE,
-                                         MAP_PRIVATE | MAP_ANONYMOUS, replayBuffer->fileHandle, 0);
-
-        if (replayBuffer->memoryBlock)
-        {
-        }
-        else
-        {
-            // TODO diagnostick
-        }
-    }
-
     if (!samples || !gameMemory.permanentStorage || !gameMemory.transientStorage)
     {
         printf("Could not initialize game memory\n");
@@ -937,16 +811,6 @@ int main(int argc, char *args[])
             buffer.height              = globalBackBuffer.height;
             buffer.pitch               = globalBackBuffer.pitch;
             buffer.bytesPerPixel       = globalBackBuffer.bytesPerPixel;
-
-            if (linuxState.inputRecordingIndex)
-            {
-                LinuxRecordInput(&linuxState, newInput);
-            }
-
-            if (linuxState.inputPlayingIndex)
-            {
-                LinuxPlaybackInput(&linuxState, newInput);
-            }
 
             if (game.updateAndRender)
             {
