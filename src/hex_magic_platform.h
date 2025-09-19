@@ -119,13 +119,16 @@ struct GameControllerInput
 {
     union
     {
-        GameButtonState buttons[4];
+        GameButtonState buttons[5];
         struct
         {
             GameButtonState moveUp;
             GameButtonState moveDown;
             GameButtonState moveLeft;
             GameButtonState moveRight;
+
+            GameButtonState toggleMode;
+            GameButtonState nextBiome;
         };
     };
 };

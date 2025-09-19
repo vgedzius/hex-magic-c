@@ -33,7 +33,7 @@ struct Color
 
 enum Biome
 {
-    GRASS,
+    GRASS = 1,
     DIRT,
     LAVA,
     ROUGH,
@@ -71,12 +71,26 @@ struct Camera
     real32 speed;
 };
 
+enum GameMode
+{
+    EDIT,
+    PLAY
+};
+
+struct Editor
+{
+    Biome selectedBiome;
+};
+
 struct GameState
 {
     MemoryArena worldArena;
     World *world;
 
     Camera camera;
+
+    GameMode mode;
+    Editor editor;
 };
 
 #define HEX_MAGIC_H

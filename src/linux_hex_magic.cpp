@@ -662,6 +662,16 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                         LinuxProcessKeyboardMessage(&keyboardController->moveRight,
                                                     e.key.state == SDL_PRESSED);
                     }
+                    else if (vkCode == 'e')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->toggleMode,
+                                                    e.key.state == SDL_PRESSED);
+                    }
+                    else if (vkCode == 'n')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome,
+                                                    e.key.state == SDL_PRESSED);
+                    }
                     else if (vkCode == SDLK_UP)
                     {
                         LinuxProcessKeyboardMessage(&keyboardController->moveUp,

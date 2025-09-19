@@ -335,6 +335,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->camera.position = {8.5f, 4.0f};
         gameState->camera.velocity = {};
         gameState->camera.speed    = 100.0f;
+        gameState->mode            = PLAY;
 
         gameState->world = PushStruct(&gameState->worldArena, World);
 
@@ -363,10 +364,40 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         memory->isInitialized = true;
     }
 
+    World *world   = gameState->world;
+    Editor *editor = &gameState->editor;
+
     int32 mouseControlZone = 50;
 
     GameControllerInput *controller = GetController(input, 0);
     V2 ddCamera                     = {};
+
+#if HEX_MAGIC_INTERNAL
+    if (controller->toggleMode.endedDown)
+    {
+        gameState->mode = gameState->mode == EDIT ? PLAY : EDIT;
+    }
+
+    if (controller->nextBiome.endedDown)
+    {
+        if (!editor->selectedBiome)
+        {
+            editor->selectedBiome = (Biome)1;
+        }
+        else
+        {
+            // TODO figure out this enum stuff how to loop arround to the beginning.
+            if (editor->selectedBiome == ROCK)
+            {
+                editor->selectedBiome = (Biome)1;
+            }
+            else
+            {
+                editor->selectedBiome = (Biome)(editor->selectedBiome + 1);
+            }
+        }
+    }
+#endif
 
     if (controller->moveDown.endedDown || input->mouseY > buffer->height - mouseControlZone)
     {
@@ -402,10 +433,22 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                        camera->velocity * input->dtForFrame + camera->position;
     camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
 
-    DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height},
-                  {1.0f, 0.0f, 1.0f});
+    Color bgColor;
+#if HEX_MAGIC_INTERNAL
+    if (gameState->mode == EDIT)
+    {
+        bgColor = {1.0f, 0.0f, 1.0f};
+    }
+    else
+    {
+#endif
+        bgColor = {0.392f, 0.584f, 0.929f};
+#if HEX_MAGIC_INTERNAL
+    }
+#endif
 
-    World *world             = gameState->world;
+    DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height}, bgColor);
+
     V2 screenCenter          = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
     HexCoord cameraHexPos    = V2ToHex(gameState->camera.position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
@@ -418,7 +461,21 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     if (input->mouseButtons[0].endedDown)
     {
-        world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+        if (gameState->mode == PLAY)
+        {
+            world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+        }
+        else
+        {
+            if (editor->selectedBiome)
+            {
+                HexCell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+                if (cell)
+                {
+                    cell->biome = editor->selectedBiome;
+                }
+            }
+        }
     }
 
     for (int32 relY = -5; relY < 5; ++relY)
@@ -438,18 +495,28 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 cellScreenPos += screenCenter;
                 cellScreenPos.y = buffer->height - cellScreenPos.y;
 
-                Color color;
+                Color color = BiomeColor(cell->biome);
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
                     color = selectedColor;
                 }
                 else if (mouseHexPos == cell->coord)
                 {
-                    color = hoverColor;
-                }
-                else
-                {
-                    color = BiomeColor(cell->biome);
+#if HEX_MAGIC_INTERNAL
+                    if (gameState->mode == EDIT)
+                    {
+                        if (editor->selectedBiome)
+                        {
+                            color = BiomeColor(editor->selectedBiome);
+                        }
+                    }
+                    else
+                    {
+#endif
+                        color = hoverColor;
+#if HEX_MAGIC_INTERNAL
+                    }
+#endif
                 }
 
                 DrawCell(buffer, world, cellScreenPos, color);
