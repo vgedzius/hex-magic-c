@@ -3,27 +3,13 @@
 #include "hex_magic_platform.h"
 #include "hex_magic_math.h"
 #include "hex_magic_intrinsics.h"
+#include "hex_magic_hex.h"
 
 struct MemoryArena
 {
     MemoryIndex size;
     uint8 *base;
     MemoryIndex used;
-};
-
-struct HexCoord
-{
-    int32 q, r, s;
-};
-
-struct HexCoordF
-{
-    real32 q, r, s;
-};
-
-struct OffsetCoord
-{
-    int32 x, y;
 };
 
 struct Color
@@ -43,7 +29,7 @@ enum Biome
     ROCK
 };
 
-struct HexCell
+struct Cell
 {
     HexCoord coord;
     V2 position;
@@ -65,8 +51,8 @@ struct World
     int32 width;
     int32 height;
 
-    HexCell *cells;
-    HexCell *selectedCell;
+    Cell *cells;
+    Cell *selectedCell;
 
     uint32 heroCount;
     Hero heroes[256];

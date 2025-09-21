@@ -6,6 +6,8 @@
 #include "hex_magic_math.h"
 #include "hex_magic_platform.h"
 
+#include "hex_magic_hex.cpp"
+
 internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, Color c)
 {
     int32 minX = RoundReal32ToInt32(vMin.x);
@@ -192,88 +194,6 @@ internal void DrawHero(GameOffscreenBuffer *buffer, World *world, V2 p)
     DrawRectangle(buffer, min, max, color);
 }
 
-inline HexCoord HexFromOffset(OffsetCoord coord)
-{
-    HexCoord result;
-    int32 parity = coord.y & 1;
-
-    result.q = coord.x - (coord.y - parity) / 2;
-    result.r = coord.y;
-    result.s = -result.q - result.r;
-
-    return result;
-}
-
-inline OffsetCoord OffsetFromHex(HexCoord hex)
-{
-    OffsetCoord result;
-    int32 parity = hex.r & 1;
-
-    result.x = hex.q + (hex.r - parity) / 2;
-    result.y = hex.r;
-
-    return result;
-}
-
-inline HexCoord RoundHex(HexCoordF hex)
-{
-    int32 q = RoundReal32ToInt32(hex.q);
-    int32 r = RoundReal32ToInt32(hex.r);
-    int32 s = RoundReal32ToInt32(hex.s);
-
-    real32 qDiff = Abs(q - hex.q);
-    real32 rDiff = Abs(r - hex.r);
-    real32 sDiff = Abs(s - hex.s);
-
-    if (qDiff > rDiff && qDiff > sDiff)
-    {
-        q = -r - s;
-    }
-    else if (rDiff > sDiff)
-    {
-        r = -q - s;
-    }
-    else
-    {
-        s = -q - r;
-    }
-
-    return HexCoord{q, r, s};
-}
-
-inline HexCoord V2ToHex(V2 pos)
-{
-    HexCoordF result;
-
-    result.q = Sqrt(3) / 3.0f * pos.x - 1.0f / 3.0f * pos.y;
-    result.r = 2.0f / 3.0f * pos.y;
-    result.s = -result.q - result.r;
-
-    return RoundHex(result);
-}
-
-inline V2 HexToV2(HexCoord hex)
-{
-    V2 result;
-    real32 sqrt3 = Sqrt(3);
-
-    result.x = sqrt3 * (real32)hex.q + sqrt3 / 2.0f * (real32)hex.r;
-    result.y = 1.5f * (real32)hex.r;
-
-    return result;
-}
-
-inline HexCell *GetCellByOffset(World *world, OffsetCoord coord)
-{
-    if (coord.x < 0 || coord.x >= (int32)world->width || coord.y < 0 ||
-        coord.y >= (int32)world->height)
-    {
-        return 0;
-    }
-
-    return &world->cells[coord.y * world->width + coord.x];
-}
-
 inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x, uint32 y)
 {
     V2 result;
@@ -290,21 +210,18 @@ inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x,
     return result;
 }
 
-inline bool32 operator==(HexCoord a, HexCoord b)
+internal Cell *GetCellByOffset(World *world, OffsetCoord coord)
 {
-    bool32 result = a.q == b.q && a.r == b.r && a.s == b.s;
+    if (coord.x < 0 || coord.x >= (int32)world->width || coord.y < 0 ||
+        coord.y >= (int32)world->height)
+    {
+        return 0;
+    }
 
-    return result;
+    return &world->cells[coord.y * world->width + coord.x];
 }
 
-inline bool32 operator!=(HexCoord a, HexCoord b)
-{
-    bool32 result = !(a == b);
-
-    return result;
-}
-
-inline Color BiomeColor(Biome biome)
+internal Color BiomeColor(Biome biome)
 {
     Color result;
 
@@ -410,9 +327,9 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->selectedCell = 0;
         world->heroCount    = 0;
 
-        world->cells = PushArray(&gameState->worldArena, world->width * world->height, HexCell);
+        world->cells = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
-        HexCell *cell = world->cells;
+        Cell *cell = world->cells;
         for (int32 y = 0; y < world->height; ++y)
         {
             for (int32 x = 0; x < world->width; ++x)
@@ -556,7 +473,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         else
         {
 #if HEX_MAGIC_INTERNAL
-            HexCell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+            Cell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
             if (cell)
             {
                 if (editor->brush == BIOME)
@@ -585,7 +502,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;
 
-            HexCell *cell = GetCellByOffset(gameState->world, {x, y});
+            Cell *cell = GetCellByOffset(gameState->world, {x, y});
             if (cell)
             {
                 bool32 isHovering = mouseHexPos == cell->coord;

@@ -1,5 +1,4 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_keycode.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
