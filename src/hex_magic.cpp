@@ -3,6 +3,7 @@
 #include <cstring>
 #include "hex_magic.h"
 #include "hex_magic_intrinsics.h"
+#include "hex_magic_math.h"
 #include "hex_magic_platform.h"
 
 internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, Color c)
@@ -151,6 +152,44 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
 
         destRow += buffer->pitch;
     }
+}
+
+internal uint32 AddHero(World *world)
+{
+    uint32 heroIndex = ++world->heroCount;
+    Assert(heroIndex < ArrayCount(world->heroes));
+
+    return heroIndex;
+}
+
+internal Hero *GetHero(World *world, uint32 index)
+{
+    Hero *hero = 0;
+
+    if (index > 0 && index < ArrayCount(world->heroes))
+    {
+        hero = &world->heroes[index];
+    }
+
+    return hero;
+}
+
+internal void InitialiseHero(World *world, uint32 heroIndex)
+{
+    Hero *hero  = GetHero(world, heroIndex);
+    hero->alive = true;
+}
+
+internal void DrawHero(GameOffscreenBuffer *buffer, World *world, V2 p)
+{
+    real32 width  = 0.5f;
+    real32 height = 0.5f;
+
+    V2 min      = {p.x - width * 0.5f * world->scale, p.y - height * 0.5f * world->scale};
+    V2 max      = {p.x + width * 0.5f * world->scale, p.y + height * 0.5f * world->scale};
+    Color color = {1.0f, 1.0f, 0.0f};
+
+    DrawRectangle(buffer, min, max, color);
 }
 
 inline HexCoord HexFromOffset(OffsetCoord coord)
@@ -357,31 +396,36 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->camera.position = {8.5f, 4.0f};
         gameState->camera.velocity = {};
         gameState->camera.speed    = 100.0f;
-        gameState->mode            = PLAY;
+
+        gameState->editor = {};
+        gameState->mode   = PLAY;
 
         gameState->world = PushStruct(&gameState->worldArena, World);
+        World *world     = gameState->world;
 
-        World *world        = gameState->world;
         world->position     = {};
         world->width        = 900;
         world->height       = 600;
         world->scale        = 75.0f;
         world->selectedCell = 0;
+        world->heroCount    = 0;
+
         world->cells = PushArray(&gameState->worldArena, world->width * world->height, HexCell);
 
         HexCell *cell = world->cells;
-
-        for (int32 y = 0; y < world->height; y++)
+        for (int32 y = 0; y < world->height; ++y)
         {
-            for (int32 x = 0; x < world->width; x++)
+            for (int32 x = 0; x < world->width; ++x)
             {
                 cell->coord    = HexFromOffset({x, y});
                 cell->biome    = WATER;
                 cell->position = HexToV2(cell->coord);
 
-                cell++;
+                ++cell;
             }
         }
+
+        AddHero(world);
 
         memory->isInitialized = true;
     }
@@ -403,22 +447,22 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     if (WasPressed(controller->nextBiome))
     {
-        if (!editor->selectedBiome)
+        editor->brush = BIOME;
+
+        // TODO figure out this enum stuff how to loop arround to the beginning.
+        if (editor->selectedBiome == ROCK)
         {
-            editor->selectedBiome = (Biome)1;
+            editor->selectedBiome = (Biome)0;
         }
         else
         {
-            // TODO figure out this enum stuff how to loop arround to the beginning.
-            if (editor->selectedBiome == ROCK)
-            {
-                editor->selectedBiome = (Biome)1;
-            }
-            else
-            {
-                editor->selectedBiome = (Biome)(editor->selectedBiome + 1);
-            }
+            editor->selectedBiome = (Biome)(editor->selectedBiome + 1);
         }
+    }
+
+    if (WasPressed(controller->addHero))
+    {
+        editor->brush = HERO;
     }
 
     if (WasPressed(controller->save))
@@ -462,9 +506,10 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         ddCamera.x = 1.0f;
     }
 
-    if ((ddCamera.x != 0.0f) && (ddCamera.y != 0.0f))
+    real32 ddCameraLength = LengthSq(ddCamera);
+    if (ddCameraLength > 1.0f)
     {
-        ddCamera *= 0.707106781187f;
+        ddCamera *= 1.0f / SquareRoot(ddCameraLength);
     }
 
     Camera *camera = &gameState->camera;
@@ -510,14 +555,26 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         }
         else
         {
-            if (editor->selectedBiome)
+#if HEX_MAGIC_INTERNAL
+            HexCell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+            if (cell)
             {
-                HexCell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
-                if (cell)
+                if (editor->brush == BIOME)
                 {
                     cell->biome = editor->selectedBiome;
                 }
+
+                if (editor->brush == HERO)
+                {
+                    if (!cell->heroIndex)
+                    {
+                        cell->heroIndex = AddHero(world);
+
+                        InitialiseHero(world, cell->heroIndex);
+                    }
+                }
             }
+#endif
         }
     }
 
@@ -531,8 +588,9 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             HexCell *cell = GetCellByOffset(gameState->world, {x, y});
             if (cell)
             {
-                V2 cellWorldPos  = cell->position + world->position;
-                V2 cellScreenPos = cellWorldPos - gameState->camera.position;
+                bool32 isHovering = mouseHexPos == cell->coord;
+                V2 cellWorldPos   = cell->position + world->position;
+                V2 cellScreenPos  = cellWorldPos - gameState->camera.position;
 
                 cellScreenPos *= world->scale;
                 cellScreenPos += screenCenter;
@@ -543,14 +601,18 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 {
                     color = selectedColor;
                 }
-                else if (mouseHexPos == cell->coord)
+                else if (isHovering)
                 {
 #if HEX_MAGIC_INTERNAL
                     if (gameState->mode == EDIT)
                     {
-                        if (editor->selectedBiome)
+                        if (editor->brush == BIOME)
                         {
                             color = BiomeColor(editor->selectedBiome);
+                        }
+                        else
+                        {
+                            color = hoverColor;
                         }
                     }
                     else
@@ -563,6 +625,14 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
 
                 DrawCell(buffer, world, cellScreenPos, color);
+
+#if HEX_MAGIC_INTERNAL
+                if ((gameState->mode == EDIT && editor->brush == HERO && isHovering) ||
+                    cell->heroIndex)
+                {
+                    DrawHero(buffer, world, cellScreenPos);
+                }
+#endif
             }
         }
     }

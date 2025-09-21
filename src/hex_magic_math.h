@@ -1,5 +1,6 @@
-#include <climits>
 #if !defined HEX_MAGIC_MATH_H
+#include <cmath>
+#include <climits>
 
 #include "hex_magic_platform.h"
 
@@ -90,6 +91,27 @@ inline uint32 Abs(int32 v)
 inline real32 Square(real32 v)
 {
     real32 result = v * v;
+
+    return result;
+}
+
+inline real32 SquareRoot(real32 v)
+{
+    real32 result = sqrtf(v);
+
+    return result;
+}
+
+inline real32 Inner(V2 a, V2 b)
+{
+    real32 result = a.x * b.x + a.y * b.y;
+
+    return result;
+}
+
+inline real32 LengthSq(V2 v)
+{
+    real32 result = Inner(v, v);
 
     return result;
 }

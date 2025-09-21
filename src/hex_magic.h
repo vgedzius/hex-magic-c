@@ -33,13 +33,13 @@ struct Color
 
 enum Biome
 {
-    GRASS = 1,
+    WATER,
+    GRASS,
     DIRT,
     LAVA,
     ROUGH,
     SAND,
     SNOW,
-    WATER,
     ROCK
 };
 
@@ -49,6 +49,12 @@ struct HexCell
     V2 position;
 
     Biome biome;
+    uint32 heroIndex;
+};
+
+struct Hero
+{
+    bool32 alive;
 };
 
 struct World
@@ -61,6 +67,9 @@ struct World
 
     HexCell *cells;
     HexCell *selectedCell;
+
+    uint32 heroCount;
+    Hero heroes[256];
 };
 
 struct Camera
@@ -73,12 +82,19 @@ struct Camera
 
 enum GameMode
 {
-    EDIT,
-    PLAY
+    PLAY,
+    EDIT
+};
+
+enum BrushType
+{
+    BIOME,
+    HERO
 };
 
 struct Editor
 {
+    BrushType brush;
     Biome selectedBiome;
 };
 

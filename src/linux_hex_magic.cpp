@@ -619,6 +619,10 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     {
                         LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
                     }
+                    else if (vkCode == 'h')
+                    {
+                        LinuxProcessKeyboardMessage(&keyboardController->addHero, isDown);
+                    }
                     else if (vkCode == 'p')
                     {
                         if (isDown)
