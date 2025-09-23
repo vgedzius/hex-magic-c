@@ -156,30 +156,30 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
     }
 }
 
-internal uint32 AddHero(World *world)
+internal uint32 AddEntity(World *world)
 {
-    uint32 heroIndex = ++world->heroCount;
-    Assert(heroIndex < ArrayCount(world->heroes));
+    uint32 enitityIndex = ++world->entityCount;
+    Assert(enitityIndex < ArrayCount(world->entities));
 
-    return heroIndex;
+    return enitityIndex;
 }
 
-internal Hero *GetHero(World *world, uint32 index)
+internal Entity *GetEntity(World *world, uint32 index)
 {
-    Hero *hero = 0;
+    Entity *hero = 0;
 
-    if (index > 0 && index < ArrayCount(world->heroes))
+    if (index > 0 && index < ArrayCount(world->entities))
     {
-        hero = &world->heroes[index];
+        hero = &world->entities[index];
     }
 
     return hero;
 }
 
-internal void InitialiseHero(World *world, uint32 heroIndex)
+internal void InitialiseHero(World *world, uint32 entityIndex)
 {
-    Hero *hero  = GetHero(world, heroIndex);
-    hero->alive = true;
+    Entity *hero = GetEntity(world, entityIndex);
+    hero->exists = true;
 }
 
 internal void DrawHero(GameOffscreenBuffer *buffer, World *world, V2 p)
@@ -374,7 +374,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->height       = 600;
         world->scale        = 75.0f;
         world->selectedCell = 0;
-        world->heroCount    = 0;
+        world->entityCount  = 0;
 
         world->cells = PushArray(&gameState->worldArena, world->width * world->height, Cell);
 
@@ -391,7 +391,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             }
         }
 
-        AddHero(world);
+        AddEntity(world);
 
         memory->isInitialized = true;
     }
@@ -487,17 +487,11 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                        camera->velocity * input->dtForFrame + camera->position;
     camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
 
-    Color bgColor;
+    Color bgColor = {0.392f, 0.584f, 0.929f};
 #if HEX_MAGIC_INTERNAL
     if (gameState->mode == EDIT)
     {
         bgColor = {1.0f, 0.0f, 1.0f};
-    }
-    else
-    {
-#endif
-        bgColor = {0.392f, 0.584f, 0.929f};
-#if HEX_MAGIC_INTERNAL
     }
 #endif
 
@@ -531,11 +525,11 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                 if (editor->brush == HERO)
                 {
-                    if (!cell->heroIndex)
+                    if (!cell->entityIndex)
                     {
-                        cell->heroIndex = AddHero(world);
+                        cell->entityIndex = AddEntity(world);
 
-                        InitialiseHero(world, cell->heroIndex);
+                        InitialiseHero(world, cell->entityIndex);
                     }
                 }
             }
@@ -593,7 +587,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
 #if HEX_MAGIC_INTERNAL
                 if ((gameState->mode == EDIT && editor->brush == HERO && isHovering) ||
-                    cell->heroIndex)
+                    cell->entityIndex)
                 {
                     DrawHero(buffer, world, cellScreenPos);
                 }

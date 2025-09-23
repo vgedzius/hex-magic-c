@@ -35,12 +35,12 @@ struct Cell
     V2 position;
 
     Biome biome;
-    uint32 heroIndex;
+    uint32 entityIndex;
 };
 
-struct Hero
+struct Entity
 {
-    bool32 alive;
+    bool32 exists;
 };
 
 struct World
@@ -54,8 +54,8 @@ struct World
     Cell *cells;
     Cell *selectedCell;
 
-    uint32 heroCount;
-    Hero heroes[256];
+    uint32 entityCount;
+    Entity entities[256];
 };
 
 struct Camera
