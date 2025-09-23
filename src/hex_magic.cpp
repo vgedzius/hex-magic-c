@@ -279,6 +279,55 @@ internal Color BiomeColor(Biome biome)
     return result;
 }
 
+inline Color operator+(Color a, Color b)
+{
+    Color result;
+
+    result.r = a.r + b.r;
+    result.g = a.g + b.g;
+    result.b = a.b + b.b;
+
+    return result;
+}
+
+inline Color operator-(Color a, Color b)
+{
+    Color result;
+
+    result.r = a.r - b.r;
+    result.g = a.g - b.g;
+    result.b = a.b - b.b;
+
+    return result;
+}
+
+inline Color operator*(real32 v, Color a)
+{
+    Color result;
+
+    result.r = a.r * v;
+    result.g = a.g * v;
+    result.b = a.b * v;
+
+    return result;
+}
+
+inline Color operator*(Color a, real32 v)
+{
+    Color result = v * a;
+
+    return result;
+}
+
+internal Color Lerp(Color a, Color b, real32 t)
+{
+    Assert(t < 1.0f);
+
+    Color result = a + ((b - a) * t);
+
+    return result;
+}
+
 inline bool32 WasPressed(GameButtonState button)
 {
     bool32 result = button.endedDown && button.halfTransitionCount > 0;
@@ -461,8 +510,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     V2 mouseWorldPos     = ScreenToWorld(buffer, gameState, input->mouseX, input->mouseY);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
 
-    Color hoverColor    = {1.0f, 1.0f, 1.0f};
-    Color selectedColor = {1.0f, 0.0f, 0.0f};
+    Color white = {1.0f, 1.0f, 1.0f};
 
     if (WasPressed(input->mouseButtons[0]))
     {
@@ -516,7 +564,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 Color color = BiomeColor(cell->biome);
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
-                    color = selectedColor;
+                    color = Lerp(color, white, 0.2f);
                 }
                 else if (isHovering)
                 {
@@ -529,13 +577,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                         }
                         else
                         {
-                            color = hoverColor;
+                            color = Lerp(color, white, 0.1f);
                         }
                     }
                     else
                     {
 #endif
-                        color = hoverColor;
+                        color = Lerp(color, white, 0.1f);
 #if HEX_MAGIC_INTERNAL
                     }
 #endif
