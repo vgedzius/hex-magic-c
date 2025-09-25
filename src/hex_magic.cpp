@@ -394,8 +394,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->world = PushStruct(&gameState->worldArena, World);
         World *world     = gameState->world;
 
-        world->width        = 900;
-        world->height       = 600;
+        world->width        = 160;
+        world->height       = 100;
         world->selectedCell = 0;
         world->entityCount  = 0;
 
