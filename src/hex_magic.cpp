@@ -417,17 +417,18 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     int32 mouseControlZone = 50;
 
-    GameKeyboardInput *controller = &input->keyboard;
-    V2 ddCamera                   = {};
+    GameKeyboardInput *keyboard = &input->keyboard;
+    GameMouseInput *mouse       = &input->mouse;
+    V2 ddCamera                 = {};
 
 #if HEX_MAGIC_INTERNAL
-    if (WasPressed(controller->toggleMode))
+    if (WasPressed(keyboard->toggleMode))
     {
         gameState->mode     = gameState->mode == EDIT ? PLAY : EDIT;
         world->selectedCell = 0;
     }
 
-    if (WasPressed(controller->nextBiome))
+    if (WasPressed(keyboard->nextBiome))
     {
         editor->brush = BIOME;
 
@@ -442,18 +443,18 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         }
     }
 
-    if (WasPressed(controller->addHero))
+    if (WasPressed(keyboard->addHero))
     {
         editor->brush = HERO;
     }
 
-    if (WasPressed(controller->save))
+    if (WasPressed(keyboard->save))
     {
         memory->debugPlatformWriteEntireFile(thread, "world.map", gameState->worldArena.size,
                                              world);
     }
 
-    if (WasPressed(controller->load))
+    if (WasPressed(keyboard->load))
     {
         DebugReadFileResult result = memory->debugPlatformReadEntireFile(thread, "world.map");
         if (result.contentsSize)
@@ -463,27 +464,27 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     }
 #endif
 
-    if (WasPressed(controller->cancel))
+    if (WasPressed(keyboard->cancel))
     {
         world->selectedCell = 0;
     }
 
-    if (IsHeld(controller->moveDown) || input->mouseY > buffer->height - mouseControlZone)
+    if (IsHeld(keyboard->moveDown) || mouse->mouseY > buffer->height - mouseControlZone)
     {
         ddCamera.y = -1.0f;
     }
 
-    if (IsHeld(controller->moveUp) || input->mouseY < mouseControlZone)
+    if (IsHeld(keyboard->moveUp) || mouse->mouseY < mouseControlZone)
     {
         ddCamera.y = 1.0f;
     }
 
-    if (IsHeld(controller->moveLeft) || input->mouseX < mouseControlZone)
+    if (IsHeld(keyboard->moveLeft) || mouse->mouseX < mouseControlZone)
     {
         ddCamera.x = -1.0f;
     }
 
-    if (IsHeld(controller->moveRight) || input->mouseX > buffer->width - mouseControlZone)
+    if (IsHeld(keyboard->moveRight) || mouse->mouseX > buffer->width - mouseControlZone)
     {
         ddCamera.x = 1.0f;
     }
@@ -516,12 +517,12 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     HexCoord cameraHexPos    = V2ToHex(camera->position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
-    V2 mouseWorldPos     = ScreenToWorld(buffer, camera, input->mouseX, input->mouseY);
+    V2 mouseWorldPos     = ScreenToWorld(buffer, camera, mouse->mouseX, mouse->mouseY);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
 
     Color white = {1.0f, 1.0f, 1.0f};
 
-    if (WasPressed(input->mouseButtons[0]))
+    if (WasPressed(mouse->lButton))
     {
         if (gameState->mode == PLAY)
         {

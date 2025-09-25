@@ -139,14 +139,30 @@ struct GameKeyboardInput
     };
 };
 
+struct GameMouseInput
+{
+    int32 mouseX, mouseY;
+
+    union
+    {
+        GameButtonState buttons[5];
+        struct
+        {
+            GameButtonState lButton;
+            GameButtonState mButton;
+            GameButtonState rButton;
+            GameButtonState x1Button;
+            GameButtonState x2Button;
+        };
+    };
+};
+
 struct GameInput
 {
-    GameButtonState mouseButtons[5];
-    int32 mouseX, mouseY, mouseZ;
-
     real32 dtForFrame;
 
     GameKeyboardInput keyboard;
+    GameMouseInput mouse;
 };
 
 struct GameMemory

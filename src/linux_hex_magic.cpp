@@ -1,4 +1,6 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_mouse.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -221,7 +223,7 @@ internal void LinuxInitSound(uint32 samplesPerSecond, uint32 bufferSize)
     }
 }
 
-internal void LinuxProcessKeyboardMessage(GameButtonState *newState, bool32 isPressed)
+internal void LinuxUpdateButtonState(GameButtonState *newState, bool32 isPressed)
 {
     if (newState->endedDown != isPressed)
     {
@@ -520,7 +522,7 @@ void ToggleFullscreen(LinuxState *state, SDL_Window *window)
 }
 
 internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, LinuxState *state,
-                                 GameKeyboardInput *keyboardController)
+                                 GameKeyboardInput *keyboard, GameMouseInput *mouse)
 {
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0)
@@ -553,6 +555,48 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
             }
             break;
 
+            case SDL_MOUSEMOTION:
+            {
+                SDL_MouseMotionEvent event = e.motion;
+
+                mouse->mouseX = event.x;
+                mouse->mouseY = event.y;
+            }
+            break;
+
+            case SDL_MOUSEBUTTONDOWN:
+            case SDL_MOUSEBUTTONUP:
+            {
+                SDL_MouseButtonEvent event = e.button;
+                bool32 isDown              = event.state == SDL_PRESSED;
+
+                if (event.button == SDL_BUTTON_LEFT)
+                {
+                    LinuxUpdateButtonState(&mouse->lButton, isDown);
+                }
+
+                if (event.button == SDL_BUTTON_MIDDLE)
+                {
+                    LinuxUpdateButtonState(&mouse->mButton, isDown);
+                }
+
+                if (event.button == SDL_BUTTON_RIGHT)
+                {
+                    LinuxUpdateButtonState(&mouse->rButton, isDown);
+                }
+
+                if (event.button == SDL_BUTTON_X1)
+                {
+                    LinuxUpdateButtonState(&mouse->x1Button, isDown);
+                }
+
+                if (event.button == SDL_BUTTON_X2)
+                {
+                    LinuxUpdateButtonState(&mouse->x2Button, isDown);
+                }
+            }
+            break;
+
             case SDL_KEYDOWN:
             case SDL_KEYUP:
             {
@@ -563,35 +607,35 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                 {
                     if (vkCode == 'w')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveUp, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveUp, isDown);
                     }
                     else if (vkCode == 'a')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveLeft, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveLeft, isDown);
                     }
                     else if (vkCode == 's')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveDown, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveDown, isDown);
                     }
                     else if (vkCode == 'd')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveRight, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveRight, isDown);
                     }
                     else if (vkCode == SDLK_UP)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveUp, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveUp, isDown);
                     }
                     else if (vkCode == SDLK_LEFT)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveLeft, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveLeft, isDown);
                     }
                     else if (vkCode == SDLK_DOWN)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveDown, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveDown, isDown);
                     }
                     else if (vkCode == SDLK_RIGHT)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->moveRight, isDown);
+                        LinuxUpdateButtonState(&keyboard->moveRight, isDown);
                     }
                     else if (vkCode == SDLK_RETURN && isDown && (e.key.keysym.mod & KMOD_ALT))
                     {
@@ -599,28 +643,28 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     }
                     else if (vkCode == SDLK_ESCAPE)
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->cancel, isDown);
+                        LinuxUpdateButtonState(&keyboard->cancel, isDown);
                     }
 #if HEX_MAGIC_INTERNAL
                     else if (vkCode == 'l')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->load, isDown);
+                        LinuxUpdateButtonState(&keyboard->load, isDown);
                     }
                     else if (vkCode == 'm')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->save, isDown);
+                        LinuxUpdateButtonState(&keyboard->save, isDown);
                     }
                     else if (vkCode == 'e')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->toggleMode, isDown);
+                        LinuxUpdateButtonState(&keyboard->toggleMode, isDown);
                     }
                     else if (vkCode == 'b')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->nextBiome, isDown);
+                        LinuxUpdateButtonState(&keyboard->nextBiome, isDown);
                     }
                     else if (vkCode == 'h')
                     {
-                        LinuxProcessKeyboardMessage(&keyboardController->addHero, isDown);
+                        LinuxUpdateButtonState(&keyboard->addHero, isDown);
                     }
                     else if (vkCode == 'p')
                     {
@@ -806,19 +850,20 @@ int main(int argc, char *args[])
                 oldKeyboardInput->buttons[buttonIndex].endedDown;
         }
 
-        LinuxProcessEvents(window, renderer, &linuxState, newKeyboardInput);
+        GameMouseInput *oldMouseInput = &oldInput->mouse;
+        GameMouseInput *newMouseInput = &newInput->mouse;
+
+        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newMouseInput->buttons);
+             ++buttonIndex)
+        {
+            newMouseInput->buttons[buttonIndex].endedDown =
+                oldMouseInput->buttons[buttonIndex].endedDown;
+        }
+
+        LinuxProcessEvents(window, renderer, &linuxState, newKeyboardInput, newMouseInput);
 
         if (!globalPause)
         {
-            newInput->mouseZ = 0;
-
-            uint32 buttons = SDL_GetMouseState(&newInput->mouseX, &newInput->mouseY);
-            LinuxProcessKeyboardMessage(&newInput->mouseButtons[0], buttons & SDL_BUTTON_LMASK);
-            LinuxProcessKeyboardMessage(&newInput->mouseButtons[1], buttons & SDL_BUTTON_MMASK);
-            LinuxProcessKeyboardMessage(&newInput->mouseButtons[2], buttons & SDL_BUTTON_RMASK);
-            LinuxProcessKeyboardMessage(&newInput->mouseButtons[3], buttons & SDL_BUTTON_X1MASK);
-            LinuxProcessKeyboardMessage(&newInput->mouseButtons[4], buttons & SDL_BUTTON_X2MASK);
-
             ThreadContext thread = {};
 
             GameOffscreenBuffer buffer = {};
