@@ -417,8 +417,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     int32 mouseControlZone = 50;
 
-    GameControllerInput *controller = GetController(input, 0);
-    V2 ddCamera                     = {};
+    GameKeyboardInput *controller = &input->keyboard;
+    V2 ddCamera                   = {};
 
 #if HEX_MAGIC_INTERNAL
     if (WasPressed(controller->toggleMode))

@@ -115,7 +115,7 @@ struct GameButtonState
     bool32 endedDown;
 };
 
-struct GameControllerInput
+struct GameKeyboardInput
 {
     union
     {
@@ -146,7 +146,7 @@ struct GameInput
 
     real32 dtForFrame;
 
-    GameControllerInput controllers[5];
+    GameKeyboardInput keyboard;
 };
 
 struct GameMemory
@@ -174,14 +174,6 @@ typedef GAME_UPDATE_AND_RENDER(GameUpdateAndRender);
     void name(ThreadContext *thread, GameMemory *memory, GameSoundOutputBuffer *soundBuffer)
 
 typedef GAME_GET_SOUND_SAMPLES(GameGetSoundSamples);
-
-inline GameControllerInput *GetController(GameInput *input, uint32 controllerIndex)
-{
-    Assert(controllerIndex < ArrayCount(input->controllers));
-
-    GameControllerInput *result = &input->controllers[controllerIndex];
-    return result;
-}
 
 #define HEX_MAGIC_PLATFORM_H
 #endif

@@ -520,7 +520,7 @@ void ToggleFullscreen(LinuxState *state, SDL_Window *window)
 }
 
 internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, LinuxState *state,
-                                 GameControllerInput *keyboardController)
+                                 GameKeyboardInput *keyboardController)
 {
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0)
@@ -795,18 +795,18 @@ int main(int argc, char *args[])
             printf("Hot reload\n");
         }
 
-        GameControllerInput *oldKeyboardController = GetController(oldInput, 0);
-        GameControllerInput *newKeyboardController = GetController(newInput, 0);
-        *newKeyboardController                     = {};
+        GameKeyboardInput *oldKeyboardInput = &oldInput->keyboard;
+        GameKeyboardInput *newKeyboardInput = &newInput->keyboard;
+        *newKeyboardInput                   = {};
 
-        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newKeyboardController->buttons);
+        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newKeyboardInput->buttons);
              ++buttonIndex)
         {
-            newKeyboardController->buttons[buttonIndex].endedDown =
-                oldKeyboardController->buttons[buttonIndex].endedDown;
+            newKeyboardInput->buttons[buttonIndex].endedDown =
+                oldKeyboardInput->buttons[buttonIndex].endedDown;
         }
 
-        LinuxProcessEvents(window, renderer, &linuxState, newKeyboardController);
+        LinuxProcessEvents(window, renderer, &linuxState, newKeyboardInput);
 
         if (!globalPause)
         {
