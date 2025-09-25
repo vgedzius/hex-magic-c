@@ -25,6 +25,20 @@ inline uint32 FloorReal32ToUint32(real32 real32)
     return result;
 }
 
+inline int32 FloorReal32ToInt32(real32 real32)
+{
+    int32 result = (int32)floorf(real32);
+
+    return result;
+}
+
+inline int32 CeilReal32ToInt32(real32 real32)
+{
+    int32 result = (int32)ceilf(real32);
+
+    return result;
+}
+
 inline uint32 TruncateReal32ToUint32(real32 real32)
 {
     uint32 result = (uint32)real32;

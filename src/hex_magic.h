@@ -60,10 +60,16 @@ struct World
 struct Camera
 {
     V2 position;
-    real32 scale;
-
     V2 velocity;
     real32 speed;
+    real32 friction;
+
+    real32 zoomVelocity;
+    real32 zoom;
+    real32 zoomSpeed;
+    real32 zoomFriction;
+    real32 minZoom;
+    real32 maxZoom;
 };
 
 enum GameMode

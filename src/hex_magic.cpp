@@ -137,7 +137,7 @@ internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x,
     result.y = (real32)buffer->height - (real32)y;
 
     result -= screenCenter;
-    result *= 1.0f / camera->scale;
+    result *= 1.0f / camera->zoom;
     result += camera->position;
 
     return result;
@@ -148,7 +148,7 @@ internal V2 PointToScreen(GameOffscreenBuffer *buffer, Camera *camera, V2 point)
     V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
     V2 result       = point - camera->position;
 
-    result *= camera->scale;
+    result *= camera->zoom;
     result += screenCenter;
     result.y = buffer->height - result.y;
 
@@ -160,10 +160,10 @@ internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, 
     real32 sqrt3 = Sqrt(3);
     V2 pos       = PointToScreen(buffer, camera, cell->position);
 
-    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * camera->scale);
-    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * camera->scale);
-    int32 minY = RoundReal32ToInt32(pos.y - camera->scale);
-    int32 maxY = RoundReal32ToInt32(pos.y + camera->scale);
+    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * camera->zoom);
+    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * camera->zoom);
+    int32 minY = RoundReal32ToInt32(pos.y - camera->zoom);
+    int32 maxY = RoundReal32ToInt32(pos.y + camera->zoom);
 
     if (minX < 0)
     {
@@ -185,8 +185,8 @@ internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, 
         maxY = buffer->height;
     }
 
-    real32 v = camera->scale / 2;
-    real32 h = sqrt3 / 2 * camera->scale;
+    real32 v = camera->zoom / 2;
+    real32 h = sqrt3 / 2 * camera->zoom;
 
     uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
@@ -218,11 +218,11 @@ internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, Entity *en
 {
     V2 screenPosition = PointToScreen(buffer, camera, entity->position);
 
-    V2 min = {screenPosition.x - entity->width * 0.5f * camera->scale,
-              screenPosition.y - entity->height * 0.5f * camera->scale};
+    V2 min = {screenPosition.x - entity->width * 0.5f * camera->zoom,
+              screenPosition.y - entity->height * 0.5f * camera->zoom};
 
-    V2 max = {screenPosition.x + entity->width * 0.5f * camera->scale,
-              screenPosition.y + entity->height * 0.5f * camera->scale};
+    V2 max = {screenPosition.x + entity->width * 0.5f * camera->zoom,
+              screenPosition.y + entity->height * 0.5f * camera->zoom};
 
     DrawRectangle(buffer, min, max, entity->color);
 }
@@ -376,10 +376,17 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         InitializeArena(&gameState->worldArena, memory->permanentStorageSize - sizeof(GameState),
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
+        gameState->camera.zoom         = 75.0f;
+        gameState->camera.zoomVelocity = 0.0f;
+        gameState->camera.zoomSpeed    = 7500.0f;
+        gameState->camera.zoomFriction = 7.5f;
+        gameState->camera.minZoom      = 25.0f;
+        gameState->camera.maxZoom      = 150.0f;
+
         gameState->camera.position = {8.5f, 4.0f};
-        gameState->camera.scale    = 75.0f;
         gameState->camera.velocity = {};
-        gameState->camera.speed    = 100.0f;
+        gameState->camera.speed    = 15.0f;
+        gameState->camera.friction = 10.0f;
 
         gameState->editor = {};
         gameState->mode   = PLAY;
@@ -469,22 +476,50 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->selectedCell = 0;
     }
 
-    if (IsHeld(keyboard->moveDown) || mouse->mouseY > buffer->height - mouseControlZone)
+    Camera *camera = &gameState->camera;
+
+    real32 ddCameraZoom = input->mouse.wheel;
+    if (input->mouse.wheel > 0 && camera->zoom < camera->maxZoom)
+    {
+        ddCameraZoom = input->mouse.wheel;
+    }
+    else if (input->mouse.wheel < 0 && camera->zoom > camera->minZoom)
+    {
+        ddCameraZoom = input->mouse.wheel;
+    }
+
+    ddCameraZoom *= camera->zoomSpeed;
+    ddCameraZoom += -camera->zoomFriction * camera->zoomVelocity;
+
+    camera->zoom = 0.5f * ddCameraZoom * Square(input->dtForFrame) +
+                   camera->zoomVelocity * input->dtForFrame + camera->zoom;
+    camera->zoomVelocity = ddCameraZoom * input->dtForFrame + camera->zoomVelocity;
+
+    if (camera->zoom < camera->minZoom)
+    {
+        camera->zoom = camera->minZoom;
+    }
+    if (camera->zoom > camera->maxZoom)
+    {
+        camera->zoom = camera->maxZoom;
+    }
+
+    if (IsHeld(keyboard->moveDown) || mouse->y > buffer->height - mouseControlZone)
     {
         ddCamera.y = -1.0f;
     }
 
-    if (IsHeld(keyboard->moveUp) || mouse->mouseY < mouseControlZone)
+    if (IsHeld(keyboard->moveUp) || mouse->y < mouseControlZone)
     {
         ddCamera.y = 1.0f;
     }
 
-    if (IsHeld(keyboard->moveLeft) || mouse->mouseX < mouseControlZone)
+    if (IsHeld(keyboard->moveLeft) || mouse->x < mouseControlZone)
     {
         ddCamera.x = -1.0f;
     }
 
-    if (IsHeld(keyboard->moveRight) || mouse->mouseX > buffer->width - mouseControlZone)
+    if (IsHeld(keyboard->moveRight) || mouse->x > buffer->width - mouseControlZone)
     {
         ddCamera.x = 1.0f;
     }
@@ -495,10 +530,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         ddCamera *= 1.0f / SquareRoot(ddCameraLength);
     }
 
-    Camera *camera = &gameState->camera;
-
-    ddCamera *= camera->speed;
-    ddCamera += -10.0f * camera->velocity;
+    ddCamera *= camera->speed * (1000.0f / camera->zoom);
+    ddCamera += -camera->friction * camera->velocity;
 
     camera->position = 0.5f * ddCamera * Square(input->dtForFrame) +
                        camera->velocity * input->dtForFrame + camera->position;
@@ -517,7 +550,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     HexCoord cameraHexPos    = V2ToHex(camera->position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
-    V2 mouseWorldPos     = ScreenToWorld(buffer, camera, mouse->mouseX, mouse->mouseY);
+    V2 mouseWorldPos     = ScreenToWorld(buffer, camera, mouse->x, mouse->y);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
 
     Color white = {1.0f, 1.0f, 1.0f};
@@ -528,9 +561,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         {
             world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
         }
-        else
-        {
+    }
+
 #if HEX_MAGIC_INTERNAL
+    if (gameState->mode == EDIT)
+    {
+        if (IsHeld(mouse->lButton))
+        {
             Cell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
             if (cell)
             {
@@ -549,13 +586,16 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                     }
                 }
             }
-#endif
         }
     }
+#endif
 
-    for (int32 relY = -5; relY < 5; ++relY)
+    real32 innerRadius = Sqrt(3) / 2.0f;
+    int32 xSpan        = CeilReal32ToInt32(buffer->width / (4 * innerRadius * camera->zoom)) + 2;
+    int32 ySpan        = buffer->height / 3;
+    for (int32 relY = -ySpan; relY < ySpan; ++relY)
     {
-        for (int32 relX = -7; relX < 7; ++relX)
+        for (int32 relX = -xSpan; relX < xSpan; ++relX)
         {
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;

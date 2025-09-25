@@ -141,7 +141,8 @@ struct GameKeyboardInput
 
 struct GameMouseInput
 {
-    int32 mouseX, mouseY;
+    int32 x, y;
+    real32 wheel;
 
     union
     {

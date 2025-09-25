@@ -559,8 +559,15 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
             {
                 SDL_MouseMotionEvent event = e.motion;
 
-                mouse->mouseX = event.x;
-                mouse->mouseY = event.y;
+                mouse->x = event.x;
+                mouse->y = event.y;
+            }
+            break;
+
+            case SDL_MOUSEWHEEL:
+            {
+                SDL_MouseWheelEvent event = e.wheel;
+                mouse->wheel              = event.preciseY;
             }
             break;
 
@@ -852,6 +859,10 @@ int main(int argc, char *args[])
 
         GameMouseInput *oldMouseInput = &oldInput->mouse;
         GameMouseInput *newMouseInput = &newInput->mouse;
+
+        *newMouseInput   = {};
+        newMouseInput->x = oldMouseInput->x;
+        newMouseInput->y = oldMouseInput->y;
 
         for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newMouseInput->buttons);
              ++buttonIndex)
