@@ -98,14 +98,72 @@ internal void GameOutputSound(GameState *gameState, GameSoundOutputBuffer *sound
     }
 }
 
-internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color color)
+internal uint32 AddEntity(World *world)
+{
+    uint32 enitityIndex = ++world->entityCount;
+    Assert(enitityIndex < ArrayCount(world->entities));
+
+    return enitityIndex;
+}
+
+internal Entity *GetEntity(World *world, uint32 index)
+{
+    Entity *hero = 0;
+
+    if (index > 0 && index < ArrayCount(world->entities))
+    {
+        hero = &world->entities[index];
+    }
+
+    return hero;
+}
+
+internal void InitialiseHero(World *world, uint32 entityIndex, V2 position)
+{
+    Entity *hero = GetEntity(world, entityIndex);
+
+    hero->position = position;
+    hero->width    = 0.5f;
+    hero->height   = 0.5f;
+    hero->color    = {1.0f, 1.0f, 0.0f};
+}
+
+internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x, uint32 y)
+{
+    V2 result;
+    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
+
+    result.x = (real32)x;
+    result.y = (real32)buffer->height - (real32)y;
+
+    result -= screenCenter;
+    result *= 1.0f / camera->scale;
+    result += camera->position;
+
+    return result;
+}
+
+internal V2 PointToScreen(GameOffscreenBuffer *buffer, Camera *camera, V2 point)
+{
+    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
+    V2 result       = point - camera->position;
+
+    result *= camera->scale;
+    result += screenCenter;
+    result.y = buffer->height - result.y;
+
+    return result;
+}
+
+internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, Color color)
 {
     real32 sqrt3 = Sqrt(3);
+    V2 pos       = PointToScreen(buffer, camera, cell->position);
 
-    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * world->scale);
-    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * world->scale);
-    int32 minY = RoundReal32ToInt32(pos.y - world->scale);
-    int32 maxY = RoundReal32ToInt32(pos.y + world->scale);
+    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * camera->scale);
+    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * camera->scale);
+    int32 minY = RoundReal32ToInt32(pos.y - camera->scale);
+    int32 maxY = RoundReal32ToInt32(pos.y + camera->scale);
 
     if (minX < 0)
     {
@@ -127,8 +185,8 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
         maxY = buffer->height;
     }
 
-    real32 v = world->scale / 2;
-    real32 h = sqrt3 / 2 * world->scale;
+    real32 v = camera->scale / 2;
+    real32 h = sqrt3 / 2 * camera->scale;
 
     uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
@@ -156,58 +214,17 @@ internal void DrawCell(GameOffscreenBuffer *buffer, World *world, V2 pos, Color 
     }
 }
 
-internal uint32 AddEntity(World *world)
+internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, Entity *entity)
 {
-    uint32 enitityIndex = ++world->entityCount;
-    Assert(enitityIndex < ArrayCount(world->entities));
+    V2 screenPosition = PointToScreen(buffer, camera, entity->position);
 
-    return enitityIndex;
-}
+    V2 min = {screenPosition.x - entity->width * 0.5f * camera->scale,
+              screenPosition.y - entity->height * 0.5f * camera->scale};
 
-internal Entity *GetEntity(World *world, uint32 index)
-{
-    Entity *hero = 0;
+    V2 max = {screenPosition.x + entity->width * 0.5f * camera->scale,
+              screenPosition.y + entity->height * 0.5f * camera->scale};
 
-    if (index > 0 && index < ArrayCount(world->entities))
-    {
-        hero = &world->entities[index];
-    }
-
-    return hero;
-}
-
-internal void InitialiseHero(World *world, uint32 entityIndex)
-{
-    Entity *hero = GetEntity(world, entityIndex);
-    hero->exists = true;
-}
-
-internal void DrawHero(GameOffscreenBuffer *buffer, World *world, V2 p)
-{
-    real32 width  = 0.5f;
-    real32 height = 0.5f;
-
-    V2 min      = {p.x - width * 0.5f * world->scale, p.y - height * 0.5f * world->scale};
-    V2 max      = {p.x + width * 0.5f * world->scale, p.y + height * 0.5f * world->scale};
-    Color color = {1.0f, 1.0f, 0.0f};
-
-    DrawRectangle(buffer, min, max, color);
-}
-
-inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, GameState *state, uint32 x, uint32 y)
-{
-    V2 result;
-    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
-    World *world    = state->world;
-
-    result.x = (real32)x;
-    result.y = (real32)buffer->height - (real32)y;
-
-    result -= screenCenter;
-    result *= 1.0f / world->scale;
-    result += state->camera.position;
-
-    return result;
+    DrawRectangle(buffer, min, max, entity->color);
 }
 
 internal Cell *GetCellByOffset(World *world, OffsetCoord coord)
@@ -360,6 +377,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
         gameState->camera.position = {8.5f, 4.0f};
+        gameState->camera.scale    = 75.0f;
         gameState->camera.velocity = {};
         gameState->camera.speed    = 100.0f;
 
@@ -369,10 +387,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->world = PushStruct(&gameState->worldArena, World);
         World *world     = gameState->world;
 
-        world->position     = {};
         world->width        = 900;
         world->height       = 600;
-        world->scale        = 75.0f;
         world->selectedCell = 0;
         world->entityCount  = 0;
 
@@ -497,11 +513,10 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height}, bgColor);
 
-    V2 screenCenter          = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
-    HexCoord cameraHexPos    = V2ToHex(gameState->camera.position);
+    HexCoord cameraHexPos    = V2ToHex(camera->position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
-    V2 mouseWorldPos     = ScreenToWorld(buffer, gameState, input->mouseX, input->mouseY);
+    V2 mouseWorldPos     = ScreenToWorld(buffer, camera, input->mouseX, input->mouseY);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
 
     Color white = {1.0f, 1.0f, 1.0f};
@@ -529,7 +544,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                     {
                         cell->entityIndex = AddEntity(world);
 
-                        InitialiseHero(world, cell->entityIndex);
+                        InitialiseHero(world, cell->entityIndex, cell->position);
                     }
                 }
             }
@@ -548,14 +563,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             if (cell)
             {
                 bool32 isHovering = mouseHexPos == cell->coord;
-                V2 cellWorldPos   = cell->position + world->position;
-                V2 cellScreenPos  = cellWorldPos - gameState->camera.position;
+                Color color       = BiomeColor(cell->biome);
 
-                cellScreenPos *= world->scale;
-                cellScreenPos += screenCenter;
-                cellScreenPos.y = buffer->height - cellScreenPos.y;
-
-                Color color = BiomeColor(cell->biome);
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
                     color = Lerp(color, white, 0.2f);
@@ -583,15 +592,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 #endif
                 }
 
-                DrawCell(buffer, world, cellScreenPos, color);
+                DrawCell(buffer, camera, cell, color);
 
-#if HEX_MAGIC_INTERNAL
-                if ((gameState->mode == EDIT && editor->brush == HERO && isHovering) ||
-                    cell->entityIndex)
+                if (cell->entityIndex)
                 {
-                    DrawHero(buffer, world, cellScreenPos);
+                    Entity *entity = GetEntity(world, cell->entityIndex);
+                    DrawEntity(buffer, camera, entity);
                 }
-#endif
             }
         }
     }

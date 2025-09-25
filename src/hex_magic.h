@@ -40,14 +40,13 @@ struct Cell
 
 struct Entity
 {
-    bool32 exists;
+    V2 position;
+    real32 width, height;
+    Color color;
 };
 
 struct World
 {
-    V2 position;
-    real32 scale;
-
     int32 width;
     int32 height;
 
@@ -61,8 +60,9 @@ struct World
 struct Camera
 {
     V2 position;
-    V2 velocity;
+    real32 scale;
 
+    V2 velocity;
     real32 speed;
 };
 
