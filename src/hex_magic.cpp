@@ -9,7 +9,7 @@
 
 #include "hex_magic_hex.cpp"
 
-internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, Color c)
+internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, V3 c)
 {
     int32 minX = RoundReal32ToInt32(vMin.x);
     int32 minY = RoundReal32ToInt32(vMin.y);
@@ -168,7 +168,7 @@ internal V2 PointToScreen(GameOffscreenBuffer *buffer, Camera *camera, V2 point)
     return result;
 }
 
-internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, Color color)
+internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, V3 color)
 {
     real32 sqrt3 = Sqrt(3);
     V2 pos       = PointToScreen(buffer, camera, cell->position);
@@ -228,7 +228,7 @@ internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, 
 }
 
 internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, V2 position, V2 dimensions,
-                         Color color)
+                         V3 color)
 {
     V2 screenPosition = PointToScreen(buffer, camera, position);
 
@@ -244,7 +244,7 @@ internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, V2 positio
 internal void DrawCity(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
 {
     V2 dimensions = {1.0f, 1.0f};
-    Color color   = {0.5f, 0.5f, 0.5f};
+    V3 color      = {0.5f, 0.5f, 0.5f};
 
     DrawEntity(buffer, camera, position, dimensions, color);
 }
@@ -252,7 +252,7 @@ internal void DrawCity(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
 internal void DrawHero(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
 {
     V2 dimensions = {0.5f, 0.5f};
-    Color color   = {1.0f, 1.0f, 0.0f};
+    V3 color      = {1.0f, 1.0f, 0.0f};
 
     DrawEntity(buffer, camera, position, dimensions, color);
 }
@@ -278,9 +278,9 @@ internal Cell *GetCell(World *world, HexCoord coord)
     return result;
 }
 
-internal Color BiomeColor(Biome biome)
+internal V3 BiomeColor(Biome biome)
 {
-    Color result;
+    V3 result;
 
     switch (biome)
     {
@@ -336,73 +336,21 @@ internal Color BiomeColor(Biome biome)
     return result;
 }
 
-inline Color operator+(Color a, Color b)
-{
-    Color result;
-
-    result.r = a.r + b.r;
-    result.g = a.g + b.g;
-    result.b = a.b + b.b;
-
-    return result;
-}
-
-inline Color operator-(Color a, Color b)
-{
-    Color result;
-
-    result.r = a.r - b.r;
-    result.g = a.g - b.g;
-    result.b = a.b - b.b;
-
-    return result;
-}
-
-inline Color operator*(real32 v, Color a)
-{
-    Color result;
-
-    result.r = a.r * v;
-    result.g = a.g * v;
-    result.b = a.b * v;
-
-    return result;
-}
-
-inline Color operator*(Color a, real32 v)
-{
-    Color result = v * a;
-
-    return result;
-}
-
-internal Color Lerp(Color a, Color b, real32 t)
-{
-    Assert(t < 1.0f);
-
-    Color result = a + ((b - a) * t);
-
-    return result;
-}
-
 inline bool32 WasPressed(GameButtonState button)
 {
     bool32 result = button.endedDown && button.halfTransitionCount > 0;
-
     return result;
 }
 
 inline bool32 WasReleased(GameButtonState button)
 {
     bool32 result = !button.endedDown && button.halfTransitionCount > 0;
-
     return result;
 }
 
 inline bool32 IsHeld(GameButtonState button)
 {
     bool32 result = button.endedDown;
-
     return result;
 }
 
@@ -422,11 +370,10 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->camera.zoomFriction = 7.5f;
         gameState->camera.minZoom      = 25.0f;
         gameState->camera.maxZoom      = 150.0f;
-
-        gameState->camera.position = {8.5f, 4.0f};
-        gameState->camera.velocity = {};
-        gameState->camera.speed    = 15.0f;
-        gameState->camera.friction = 10.0f;
+        gameState->camera.position     = {8.5f, 4.0f};
+        gameState->camera.velocity     = {};
+        gameState->camera.speed        = 15.0f;
+        gameState->camera.friction     = 10.0f;
 
         gameState->editor              = {};
         gameState->editor.brushSize    = 0;
@@ -607,7 +554,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                        camera->velocity * input->dtForFrame + camera->position;
     camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
 
-    Color bgColor = {0.392f, 0.584f, 0.929f};
+    V3 bgColor = {0.392f, 0.584f, 0.929f};
 #if HEX_MAGIC_INTERNAL
     if (gameState->mode == EDIT)
     {
@@ -623,7 +570,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     V2 mouseWorldPos     = ScreenToWorld(buffer, camera, mouse->x, mouse->y);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
 
-    Color white = {1.0f, 1.0f, 1.0f};
+    V3 white = {1.0f, 1.0f, 1.0f};
 
     if (WasPressed(mouse->lButton))
     {
@@ -717,7 +664,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
 #endif
 
-                Color color = BiomeColor(cell->biome);
+                V3 color = BiomeColor(cell->biome);
 
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {

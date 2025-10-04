@@ -12,11 +12,6 @@ struct MemoryArena
     MemoryIndex used;
 };
 
-struct Color
-{
-    real32 r, g, b;
-};
-
 enum Biome
 {
     WATER,
