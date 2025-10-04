@@ -119,13 +119,18 @@ struct GameKeyboardInput
 {
     union
     {
-        GameButtonState buttons[10];
+        GameButtonState buttons[14];
         struct
         {
             GameButtonState moveUp;
             GameButtonState moveDown;
             GameButtonState moveLeft;
             GameButtonState moveRight;
+
+            GameButtonState actionUp;
+            GameButtonState actionDown;
+            GameButtonState actionLeft;
+            GameButtonState actionRight;
 
             GameButtonState cancel;
 

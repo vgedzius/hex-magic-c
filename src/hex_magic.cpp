@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include "hex_magic.h"
+#include "hex_magic_hex.h"
 #include "hex_magic_intrinsics.h"
 #include "hex_magic_math.h"
 #include "hex_magic_platform.h"
@@ -256,15 +257,25 @@ internal void DrawHero(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
     DrawEntity(buffer, camera, position, dimensions, color);
 }
 
-internal Cell *GetCellByOffset(World *world, OffsetCoord coord)
+internal Cell *GetCell(World *world, OffsetCoord coord)
 {
-    if (coord.x < 0 || coord.x >= (int32)world->width || coord.y < 0 ||
-        coord.y >= (int32)world->height)
+    Cell *result = 0;
+
+    if (coord.x > 0 && coord.x < (int32)world->width && coord.y > 0 &&
+        coord.y < (int32)world->height)
     {
-        return 0;
+        result = &world->cells[coord.y * world->width + coord.x];
     }
 
-    return &world->cells[coord.y * world->width + coord.x];
+    return result;
+}
+
+internal Cell *GetCell(World *world, HexCoord coord)
+{
+    OffsetCoord offsetCoord = OffsetFromHex(coord);
+    Cell *result            = GetCell(world, offsetCoord);
+
+    return result;
 }
 
 internal Color BiomeColor(Biome biome)
@@ -417,8 +428,12 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->camera.speed    = 15.0f;
         gameState->camera.friction = 10.0f;
 
-        gameState->editor = {};
-        gameState->mode   = PLAY;
+        gameState->editor              = {};
+        gameState->editor.brushSize    = 0;
+        gameState->editor.minBrushSize = 0;
+        gameState->editor.maxBrushSize = 5;
+
+        gameState->mode = PLAY;
 
         gameState->world = PushStruct(&gameState->worldArena, World);
         World *world     = gameState->world;
@@ -464,48 +479,64 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         world->selectedCell = 0;
     }
 
-    if (WasPressed(keyboard->nextBiome))
+    if (gameState->mode == EDIT)
     {
-        editor->brush = BRUSH_BIOME;
-
-        // TODO figure out this enum stuff how to loop arround to the beginning.
-        if (editor->brushBiome == ROCK)
+        if (WasPressed(keyboard->nextBiome))
         {
-            editor->brushBiome = (Biome)0;
+            editor->brush = BRUSH_BIOME;
+
+            // TODO figure out this enum stuff how to loop arround to the beginning.
+            if (editor->brushBiome == ROCK)
+            {
+                editor->brushBiome = (Biome)0;
+            }
+            else
+            {
+                editor->brushBiome = (Biome)(editor->brushBiome + 1);
+            }
         }
-        else
+
+        if (WasPressed(keyboard->nextEntity))
         {
-            editor->brushBiome = (Biome)(editor->brushBiome + 1);
+            editor->brush = BRUSH_ENTITY;
+
+            // TODO figure out this enum stuff how to loop arround to the beginning.
+            if (editor->brushEntity == ENTITY_CITY)
+            {
+                editor->brushEntity = (EntityType)0;
+            }
+            else
+            {
+                editor->brushEntity = (EntityType)(editor->brushEntity + 1);
+            }
         }
-    }
 
-    if (WasPressed(keyboard->nextEntity))
-    {
-        editor->brush = BRUSH_ENTITY;
-
-        // TODO figure out this enum stuff how to loop arround to the beginning.
-        if (editor->brushEntity == ENTITY_CITY)
+        if (WasPressed(keyboard->save))
         {
-            editor->brushEntity = (EntityType)0;
+            memory->debugPlatformWriteEntireFile(thread, "world.map", gameState->worldArena.size,
+                                                 world);
         }
-        else
+
+        if (WasPressed(keyboard->load))
         {
-            editor->brushEntity = (EntityType)(editor->brushEntity + 1);
+            DebugReadFileResult result = memory->debugPlatformReadEntireFile(thread, "world.map");
+            if (result.contentsSize)
+            {
+                memcpy(world, result.contents, result.contentsSize);
+            }
         }
-    }
 
-    if (WasPressed(keyboard->save))
-    {
-        memory->debugPlatformWriteEntireFile(thread, "world.map", gameState->worldArena.size,
-                                             world);
-    }
-
-    if (WasPressed(keyboard->load))
-    {
-        DebugReadFileResult result = memory->debugPlatformReadEntireFile(thread, "world.map");
-        if (result.contentsSize)
+        if (editor->brush == BRUSH_BIOME)
         {
-            memcpy(world, result.contents, result.contentsSize);
+            if (WasPressed(keyboard->actionUp) && editor->brushSize < editor->maxBrushSize)
+            {
+                editor->brushSize++;
+            }
+
+            if (WasPressed(keyboard->actionDown) && editor->brushSize > editor->minBrushSize)
+            {
+                editor->brushSize--;
+            }
         }
     }
 #endif
@@ -598,7 +629,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     {
         if (gameState->mode == PLAY)
         {
-            world->selectedCell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+            world->selectedCell = GetCell(world, OffsetFromHex(mouseHexPos));
         }
     }
 
@@ -607,12 +638,32 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     {
         if (IsHeld(mouse->lButton))
         {
-            Cell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
+            Cell *cell = GetCell(world, OffsetFromHex(mouseHexPos));
             if (cell)
             {
                 if (editor->brush == BRUSH_BIOME)
                 {
-                    cell->biome = editor->brushBiome;
+                    if (editor->brushSize > 0)
+                    {
+                        int32 n = editor->brushSize;
+                        for (int32 q = -n; q <= n; ++q)
+                        {
+                            for (int32 r = Max(-n, -q - n); r <= Min(n, -q + n); ++r)
+                            {
+                                HexCoord coord    = cell->coord + HexCoord{q, r, -q - r};
+                                Cell *cellToPaint = GetCell(world, coord);
+
+                                if (cellToPaint)
+                                {
+                                    cellToPaint->biome = editor->brushBiome;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        cell->biome = editor->brushBiome;
+                    }
                 }
 
                 if (editor->brush == BRUSH_ENTITY)
@@ -653,11 +704,20 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;
 
-            Cell *cell = GetCellByOffset(gameState->world, {x, y});
+            Cell *cell = GetCell(gameState->world, OffsetCoord{x, y});
             if (cell)
             {
                 bool32 isHovering = mouseHexPos == cell->coord;
-                Color color       = BiomeColor(cell->biome);
+
+#if HEX_MAGIC_INTERNAL
+                if (gameState->mode == EDIT && editor->brush == BRUSH_BIOME &&
+                    Distance(cell->coord, mouseHexPos) <= editor->brushSize)
+                {
+                    isHovering = true;
+                }
+#endif
+
+                Color color = BiomeColor(cell->biome);
 
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
@@ -665,21 +725,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
                 else if (isHovering)
                 {
-                    color = Lerp(color, white, 0.1f);
-
 #if HEX_MAGIC_INTERNAL
-                    if (gameState->mode == EDIT)
+                    if (gameState->mode == EDIT && editor->brush == BRUSH_BIOME)
                     {
-                        if (editor->brush == BRUSH_BIOME)
-                        {
-                            color = BiomeColor(editor->brushBiome);
-                        }
-                        else
-                        {
-                            color = Lerp(color, white, 0.1f);
-                        }
+                        color = BiomeColor(editor->brushBiome);
                     }
 #endif
+                    color = Lerp(color, white, 0.1f);
                 }
 
                 DrawCell(buffer, camera, cell, color);

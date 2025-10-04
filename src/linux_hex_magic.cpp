@@ -1,6 +1,5 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_mouse.h>
+#include <SDL2/SDL_keycode.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -627,6 +626,22 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     else if (vkCode == 'd')
                     {
                         LinuxUpdateButtonState(&keyboard->moveRight, isDown);
+                    }
+                    else if (vkCode == SDLK_UP)
+                    {
+                        LinuxUpdateButtonState(&keyboard->actionUp, isDown);
+                    }
+                    else if (vkCode == SDLK_LEFT)
+                    {
+                        LinuxUpdateButtonState(&keyboard->actionLeft, isDown);
+                    }
+                    else if (vkCode == SDLK_DOWN)
+                    {
+                        LinuxUpdateButtonState(&keyboard->actionDown, isDown);
+                    }
+                    else if (vkCode == SDLK_RIGHT)
+                    {
+                        LinuxUpdateButtonState(&keyboard->actionRight, isDown);
                     }
                     else if (vkCode == SDLK_UP)
                     {

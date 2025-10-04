@@ -5,7 +5,7 @@ SESSION_NAME="hex-magic"
 BG_COLOR="#F182E7"
 FG_COLOR="#000000"
 
-cd "$(dirname "${BASH_SOURCE}")"
+cd "$(dirname "$(readlink -f "${BASH_SOURCE}")")"   
 
 if tmux has-session -t $SESSION_NAME 2>/dev/null; then
     echo "Session $SESSION_NAME already exists. Attaching to it."

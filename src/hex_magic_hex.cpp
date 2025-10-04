@@ -76,13 +76,42 @@ internal V2 HexToV2(HexCoord hex)
 inline bool32 operator==(HexCoord a, HexCoord b)
 {
     bool32 result = a.q == b.q && a.r == b.r && a.s == b.s;
-
     return result;
 }
 
 inline bool32 operator!=(HexCoord a, HexCoord b)
 {
     bool32 result = !(a == b);
+    return result;
+}
 
+inline HexCoord operator-(HexCoord a, HexCoord b)
+{
+    HexCoord result = {a.q - b.q, a.r - b.r, a.s - b.s};
+    return result;
+}
+
+inline HexCoord operator+(HexCoord a, HexCoord b)
+{
+    HexCoord result = {a.q + b.q, a.r + b.r, a.s + b.s};
+    return result;
+}
+
+inline HexCoord operator*(int32 factor, HexCoord hex)
+{
+    HexCoord result = {hex.q * factor, hex.r * factor, hex.s * factor};
+    return result;
+}
+
+inline HexCoord operator*(HexCoord hex, int32 factor)
+{
+    HexCoord result = factor * hex;
+    return result;
+}
+
+inline uint32 Distance(HexCoord a, HexCoord b)
+{
+    HexCoord vec  = a - b;
+    uint32 result = (Abs(vec.q) + Abs(vec.r) + Abs(vec.s)) / 2;
     return result;
 }

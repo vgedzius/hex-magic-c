@@ -94,6 +94,11 @@ struct Editor
 {
     BrushType brush;
     Biome brushBiome;
+
+    uint32 brushSize;
+    uint32 minBrushSize;
+    uint32 maxBrushSize;
+
     EntityType brushEntity;
 };
 
