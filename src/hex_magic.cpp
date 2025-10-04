@@ -118,14 +118,26 @@ internal Entity *GetEntity(World *world, uint32 index)
     return hero;
 }
 
-internal void InitialiseHero(World *world, uint32 entityIndex, V2 position)
+internal uint32 AddHero(World *world, V2 position)
 {
-    Entity *hero = GetEntity(world, entityIndex);
+    uint32 index   = AddEntity(world);
+    Entity *entity = GetEntity(world, index);
 
-    hero->position = position;
-    hero->width    = 0.5f;
-    hero->height   = 0.5f;
-    hero->color    = {1.0f, 1.0f, 0.0f};
+    entity->type     = ENTITY_HERO;
+    entity->position = position;
+
+    return index;
+}
+
+internal uint32 AddCity(World *world, V2 position)
+{
+    uint32 index   = AddEntity(world);
+    Entity *entity = GetEntity(world, index);
+
+    entity->type     = ENTITY_CITY;
+    entity->position = position;
+
+    return index;
 }
 
 internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x, uint32 y)
@@ -214,17 +226,34 @@ internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, 
     }
 }
 
-internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, Entity *entity)
+internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, V2 position, V2 dimensions,
+                         Color color)
 {
-    V2 screenPosition = PointToScreen(buffer, camera, entity->position);
+    V2 screenPosition = PointToScreen(buffer, camera, position);
 
-    V2 min = {screenPosition.x - entity->width * 0.5f * camera->zoom,
-              screenPosition.y - entity->height * 0.5f * camera->zoom};
+    V2 min = {screenPosition.x - dimensions.x * 0.5f * camera->zoom,
+              screenPosition.y - dimensions.y * 0.5f * camera->zoom};
 
-    V2 max = {screenPosition.x + entity->width * 0.5f * camera->zoom,
-              screenPosition.y + entity->height * 0.5f * camera->zoom};
+    V2 max = {screenPosition.x + dimensions.x * 0.5f * camera->zoom,
+              screenPosition.y + dimensions.y * 0.5f * camera->zoom};
 
-    DrawRectangle(buffer, min, max, entity->color);
+    DrawRectangle(buffer, min, max, color);
+}
+
+internal void DrawCity(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
+{
+    V2 dimensions = {1.0f, 1.0f};
+    Color color   = {0.5f, 0.5f, 0.5f};
+
+    DrawEntity(buffer, camera, position, dimensions, color);
+}
+
+internal void DrawHero(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
+{
+    V2 dimensions = {0.5f, 0.5f};
+    Color color   = {1.0f, 1.0f, 0.0f};
+
+    DrawEntity(buffer, camera, position, dimensions, color);
 }
 
 internal Cell *GetCellByOffset(World *world, OffsetCoord coord)
@@ -437,22 +466,32 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     if (WasPressed(keyboard->nextBiome))
     {
-        editor->brush = BIOME;
+        editor->brush = BRUSH_BIOME;
 
         // TODO figure out this enum stuff how to loop arround to the beginning.
-        if (editor->selectedBiome == ROCK)
+        if (editor->brushBiome == ROCK)
         {
-            editor->selectedBiome = (Biome)0;
+            editor->brushBiome = (Biome)0;
         }
         else
         {
-            editor->selectedBiome = (Biome)(editor->selectedBiome + 1);
+            editor->brushBiome = (Biome)(editor->brushBiome + 1);
         }
     }
 
-    if (WasPressed(keyboard->addHero))
+    if (WasPressed(keyboard->nextEntity))
     {
-        editor->brush = HERO;
+        editor->brush = BRUSH_ENTITY;
+
+        // TODO figure out this enum stuff how to loop arround to the beginning.
+        if (editor->brushEntity == ENTITY_CITY)
+        {
+            editor->brushEntity = (EntityType)0;
+        }
+        else
+        {
+            editor->brushEntity = (EntityType)(editor->brushEntity + 1);
+        }
     }
 
     if (WasPressed(keyboard->save))
@@ -571,18 +610,32 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             Cell *cell = GetCellByOffset(world, OffsetFromHex(mouseHexPos));
             if (cell)
             {
-                if (editor->brush == BIOME)
+                if (editor->brush == BRUSH_BIOME)
                 {
-                    cell->biome = editor->selectedBiome;
+                    cell->biome = editor->brushBiome;
                 }
 
-                if (editor->brush == HERO)
+                if (editor->brush == BRUSH_ENTITY)
                 {
-                    if (!cell->entityIndex)
+                    switch (editor->brushEntity)
                     {
-                        cell->entityIndex = AddEntity(world);
+                        case ENTITY_HERO:
+                        {
+                            if (!cell->heroIndex)
+                            {
+                                cell->heroIndex = AddHero(world, cell->position);
+                            }
+                        }
+                        break;
 
-                        InitialiseHero(world, cell->entityIndex, cell->position);
+                        case ENTITY_CITY:
+                        {
+                            if (!cell->cityIndex)
+                            {
+                                cell->cityIndex = AddCity(world, cell->position);
+                            }
+                        }
+                        break;
                     }
                 }
             }
@@ -612,34 +665,56 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
                 else if (isHovering)
                 {
+                    color = Lerp(color, white, 0.1f);
+
 #if HEX_MAGIC_INTERNAL
                     if (gameState->mode == EDIT)
                     {
-                        if (editor->brush == BIOME)
+                        if (editor->brush == BRUSH_BIOME)
                         {
-                            color = BiomeColor(editor->selectedBiome);
+                            color = BiomeColor(editor->brushBiome);
                         }
                         else
                         {
                             color = Lerp(color, white, 0.1f);
                         }
                     }
-                    else
-                    {
-#endif
-                        color = Lerp(color, white, 0.1f);
-#if HEX_MAGIC_INTERNAL
-                    }
 #endif
                 }
 
                 DrawCell(buffer, camera, cell, color);
 
-                if (cell->entityIndex)
+                if (cell->cityIndex)
                 {
-                    Entity *entity = GetEntity(world, cell->entityIndex);
-                    DrawEntity(buffer, camera, entity);
+                    Entity *entity = GetEntity(world, cell->cityIndex);
+                    DrawCity(buffer, camera, cell->position);
                 }
+
+                if (cell->heroIndex)
+                {
+                    Entity *entity = GetEntity(world, cell->heroIndex);
+                    DrawHero(buffer, camera, cell->position);
+                }
+
+#if HEX_MAGIC_INTERNAL
+                if (isHovering && gameState->mode == EDIT && editor->brush == BRUSH_ENTITY)
+                {
+                    switch (editor->brushEntity)
+                    {
+                        case ENTITY_CITY:
+                        {
+                            DrawCity(buffer, camera, cell->position);
+                        }
+                        break;
+
+                        case ENTITY_HERO:
+                        {
+                            DrawHero(buffer, camera, cell->position);
+                        }
+                        break;
+                    }
+                }
+#endif
             }
         }
     }

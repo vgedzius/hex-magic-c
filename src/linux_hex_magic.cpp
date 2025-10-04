@@ -671,7 +671,7 @@ internal void LinuxProcessEvents(SDL_Window *window, SDL_Renderer *renderer, Lin
                     }
                     else if (vkCode == 'h')
                     {
-                        LinuxUpdateButtonState(&keyboard->addHero, isDown);
+                        LinuxUpdateButtonState(&keyboard->nextEntity, isDown);
                     }
                     else if (vkCode == 'p')
                     {
@@ -1001,7 +1001,7 @@ int main(int argc, char *args[])
 
             if (currentSecond > 1.0f)
             {
-                printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
+                // printf("%.02fms/f, %df/s, %.02fMc/f\n", msPerFrame, fps, mcPerFrame);
 
                 currentSecond = 0.0f;
                 fps           = 0;

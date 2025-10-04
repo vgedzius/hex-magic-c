@@ -35,14 +35,20 @@ struct Cell
     V2 position;
 
     Biome biome;
-    uint32 entityIndex;
+    uint32 cityIndex;
+    uint32 heroIndex;
+};
+
+enum EntityType
+{
+    ENTITY_HERO,
+    ENTITY_CITY,
 };
 
 struct Entity
 {
     V2 position;
-    real32 width, height;
-    Color color;
+    EntityType type;
 };
 
 struct World
@@ -80,14 +86,15 @@ enum GameMode
 
 enum BrushType
 {
-    BIOME,
-    HERO
+    BRUSH_BIOME,
+    BRUSH_ENTITY,
 };
 
 struct Editor
 {
     BrushType brush;
-    Biome selectedBiome;
+    Biome brushBiome;
+    EntityType brushEntity;
 };
 
 struct GameState

@@ -131,7 +131,7 @@ struct GameKeyboardInput
 
             GameButtonState toggleMode;
             GameButtonState nextBiome;
-            GameButtonState addHero;
+            GameButtonState nextEntity;
 
             GameButtonState save;
             GameButtonState load;
