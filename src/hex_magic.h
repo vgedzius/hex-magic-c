@@ -21,6 +21,7 @@ enum Biome
     ROUGH,
     SAND,
     SNOW,
+    SWAMP,
     ROCK
 };
 

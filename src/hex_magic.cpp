@@ -326,6 +326,12 @@ internal V3 BiomeColor(Biome biome)
         }
         break;
 
+        case SWAMP:
+        {
+            result = {0.17254901961f, 0.30980392157f, 0.20784313725f};
+        }
+        break;
+
         case ROCK:
         {
             result = {0.36862745098f, 0.19607843137f, 0.07843137255f};
