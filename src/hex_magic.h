@@ -31,13 +31,16 @@ struct Cell
     V2 position;
 
     Biome biome;
+
     uint32 cityIndex;
     uint32 heroIndex;
+    uint32 resourceIndex;
 };
 
 enum EntityType
 {
     ENTITY_HERO,
+    ENTITY_RESOURCE,
     ENTITY_CITY,
 };
 

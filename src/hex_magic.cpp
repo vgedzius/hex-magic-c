@@ -141,6 +141,17 @@ internal uint32 AddCity(World *world, V2 position)
     return index;
 }
 
+internal uint32 AddResource(World *world, V2 position)
+{
+    uint32 index   = AddEntity(world);
+    Entity *entity = GetEntity(world, index);
+
+    entity->type     = ENTITY_RESOURCE;
+    entity->position = position;
+
+    return index;
+}
+
 internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x, uint32 y)
 {
     V2 result;
@@ -239,6 +250,14 @@ internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, V2 positio
               screenPosition.y + dimensions.y * 0.5f * camera->zoom};
 
     DrawRectangle(buffer, min, max, color);
+}
+
+internal void DrawResource(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
+{
+    V2 dimensions = {1.25f, 1.25f};
+    V3 color      = {0.5f, 0.0f, 0.5f};
+
+    DrawEntity(buffer, camera, position, dimensions, color);
 }
 
 internal void DrawCity(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
@@ -640,6 +659,15 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                             }
                         }
                         break;
+
+                        case ENTITY_RESOURCE:
+                        {
+                            if (!cell->resourceIndex)
+                            {
+                                cell->resourceIndex = AddResource(world, cell->position);
+                            }
+                        }
+                        break;
                     }
                 }
             }
@@ -689,15 +717,18 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                 DrawCell(buffer, camera, cell, color);
 
+                if (cell->resourceIndex)
+                {
+                    DrawResource(buffer, camera, cell->position);
+                }
+
                 if (cell->cityIndex)
                 {
-                    Entity *entity = GetEntity(world, cell->cityIndex);
                     DrawCity(buffer, camera, cell->position);
                 }
 
                 if (cell->heroIndex)
                 {
-                    Entity *entity = GetEntity(world, cell->heroIndex);
                     DrawHero(buffer, camera, cell->position);
                 }
 
@@ -706,6 +737,12 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 {
                     switch (editor->brushEntity)
                     {
+                        case ENTITY_RESOURCE:
+                        {
+                            DrawResource(buffer, camera, cell->position);
+                        }
+                        break;
+
                         case ENTITY_CITY:
                         {
                             DrawCity(buffer, camera, cell->position);
