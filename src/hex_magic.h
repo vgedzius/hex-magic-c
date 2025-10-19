@@ -1,4 +1,4 @@
-#if !defined(HEX_MAGIC_H)
+#if !defined(HEX_MAGIC)
 
 #include "hex_magic_platform.h"
 #include "hex_magic_math.h"
@@ -10,7 +10,29 @@ struct MemoryArena
     MemoryIndex size;
     uint8 *base;
     MemoryIndex used;
+
+    uint32 tempCount;
 };
+
+struct TemporaryMemory
+{
+    MemoryArena *arena;
+    MemoryIndex used;
+};
+
+#define PushStruct(arena, type) (type *)PushSize_(arena, sizeof(type))
+#define PushArray(arena, count, type) (type *)PushSize_(arena, count * sizeof(type))
+#define PushSize(arena, size) PushSize_(arena, size)
+
+inline void *PushSize_(MemoryArena *arena, MemoryIndex size)
+{
+    Assert((arena->used + size) <= arena->size);
+
+    void *result = arena->base + arena->used;
+    arena->used += size;
+
+    return result;
+}
 
 enum Biome
 {
@@ -112,5 +134,11 @@ struct GameState
     Editor editor;
 };
 
-#define HEX_MAGIC_H
+struct TransientState
+{
+    bool32 isInitialized;
+    MemoryArena transientArena;
+};
+
+#define HEX_MAGIC
 #endif

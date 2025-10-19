@@ -1,4 +1,4 @@
-#if !defined(HEX_MAGIC_HEX_H)
+#if !defined(HEX_MAGIC_HEX)
 
 #include "hex_magic_platform.h"
 #include "hex_magic_math.h"
@@ -18,5 +18,5 @@ struct OffsetCoord
     int32 x, y;
 };
 
-#define HEX_MAGIC_HEX_H
+#define HEX_MAGIC_HEX
 #endif

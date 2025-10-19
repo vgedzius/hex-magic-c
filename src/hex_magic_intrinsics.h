@@ -1,6 +1,6 @@
-#include <cmath>
-#if !defined(HEX_MAGIC_INTRINSICS_H)
+#if !defined(HEX_MAGIC_INTRINSICS)
 
+#include <cmath>
 #include <math.h>
 #include "hex_magic_platform.h"
 
@@ -98,5 +98,5 @@ inline BitScanResult FindLeastSignificantSetBit(uint32 value)
     return result;
 }
 
-#define HEX_MAGIC_INTRINSICS_H
+#define HEX_MAGIC_INTRINSICS
 #endif

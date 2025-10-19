@@ -1,4 +1,4 @@
-#if !defined(LINUX_HEX_MAGIC_H)
+#if !defined(LINUX_HEX_MAGIC)
 
 #include "hex_magic.h"
 #include <SDL2/SDL.h>
@@ -77,5 +77,5 @@ struct LinuxState
     SDL_Cursor *cursor;
 };
 
-#define LINUX_HEX_MAGIC_H
+#define LINUX_HEX_MAGIC
 #endif

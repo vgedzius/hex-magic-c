@@ -3,5 +3,5 @@ IndentWidth: 4
 AlignConsecutiveAssignments: Consecutive
 IndentCaseLabels: true
 BreakBeforeBraces: Allman
-ColumnLimit: 100
+ColumnLimit: 120
 SortIncludes: false

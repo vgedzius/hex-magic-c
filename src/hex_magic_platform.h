@@ -1,4 +1,4 @@
-#if !defined(HEX_MAGIC_PLATFORM_H)
+#if !defined(HEX_MAGIC_PLATFORM)
 
 #include <stdint.h>
 #include <cstddef>
@@ -42,14 +42,16 @@ typedef double real64;
 #define PI32 3.14159265359f
 
 #if HEX_MAGIC_SLOW
-#define Assert(expression)                                                                         \
-    if (!(expression))                                                                             \
-    {                                                                                              \
-        *(volatile int *)0 = 0;                                                                    \
+#define Assert(expression)                                                                                             \
+    if (!(expression))                                                                                                 \
+    {                                                                                                                  \
+        *(volatile int *)0 = 0;                                                                                        \
     }
 #else
 #define Assert(expression)
 #endif
+
+#define InvalidCodePath Assert(!"InvalidCodePath")
 
 #define Kilobytes(value) ((value) * 1024LL)
 #define Megabytes(value) (Kilobytes(value) * 1024LL)
@@ -83,11 +85,10 @@ struct DebugReadFileResult
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(ThreadContext *thread, void *memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory);
 
-#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name)                                                      \
-    DebugReadFileResult name(ThreadContext *thread, char *fileName)
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) DebugReadFileResult name(ThreadContext *thread, char *fileName)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile);
 
-#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name)                                                     \
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name)                                                                         \
     bool32 name(ThreadContext *thread, char *fileName, uint32 memorySize, void *memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile);
 
@@ -186,16 +187,15 @@ struct GameMemory
     DEBUGPlatformWriteEntireFile *debugPlatformWriteEntireFile;
 };
 
-#define GAME_UPDATE_AND_RENDER(name)                                                               \
-    void name(ThreadContext *thread, GameMemory *memory, GameInput *input,                         \
-              GameOffscreenBuffer *buffer)
+#define GAME_UPDATE_AND_RENDER(name)                                                                                   \
+    void name(ThreadContext *thread, GameMemory *memory, GameInput *input, GameOffscreenBuffer *buffer)
 
 typedef GAME_UPDATE_AND_RENDER(GameUpdateAndRender);
 
-#define GAME_GET_SOUND_SAMPLES(name)                                                               \
+#define GAME_GET_SOUND_SAMPLES(name)                                                                                   \
     void name(ThreadContext *thread, GameMemory *memory, GameSoundOutputBuffer *soundBuffer)
 
 typedef GAME_GET_SOUND_SAMPLES(GameGetSoundSamples);
 
-#define HEX_MAGIC_PLATFORM_H
+#define HEX_MAGIC_PLATFORM
 #endif

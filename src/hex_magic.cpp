@@ -1,5 +1,4 @@
 #include <cstdio>
-
 #include <cstring>
 #include "hex_magic.h"
 #include "hex_magic_hex.h"
@@ -8,69 +7,38 @@
 #include "hex_magic_platform.h"
 
 #include "hex_magic_hex.cpp"
+#include "hex_magic_render.cpp"
 
-internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, V3 c)
+inline void InitializeArena(MemoryArena *arena, MemoryIndex size, uint8 *base)
 {
-    int32 minX = RoundReal32ToInt32(vMin.x);
-    int32 minY = RoundReal32ToInt32(vMin.y);
-    int32 maxX = RoundReal32ToInt32(vMax.x);
-    int32 maxY = RoundReal32ToInt32(vMax.y);
-
-    if (minX < 0)
-    {
-        minX = 0;
-    }
-
-    if (minY < 0)
-    {
-        minY = 0;
-    }
-
-    if (maxX > buffer->width)
-    {
-        maxX = buffer->width;
-    }
-
-    if (maxY > buffer->height)
-    {
-        maxY = buffer->height;
-    }
-
-    uint32 color = (RoundReal32ToUint32(c.r * 255.0f) << 16) |
-                   (RoundReal32ToUint32(c.g * 255.0f) << 8) |
-                   (RoundReal32ToUint32(c.b * 255.0f) << 0);
-
-    uint8 *row = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
-    for (int y = minY; y < maxY; ++y)
-    {
-        uint32 *pixel = (uint32 *)row;
-        for (int x = minX; x < maxX; ++x)
-        {
-            *pixel++ = color;
-        }
-
-        row += buffer->pitch;
-    }
+    arena->size      = size;
+    arena->base      = base;
+    arena->used      = 0;
+    arena->tempCount = 0;
 }
 
-internal void InitializeArena(MemoryArena *arena, MemoryIndex size, uint8 *base)
+inline TemporaryMemory StartTemporaryMemory(MemoryArena *arena)
 {
-    arena->size = size;
-    arena->base = base;
-    arena->used = 0;
-}
+    TemporaryMemory result = {};
 
-#define PushStruct(arena, type) (type *)PushSize_(arena, sizeof(type))
-#define PushArray(arena, count, type) (type *)PushSize_(arena, count * sizeof(type))
-void *PushSize_(MemoryArena *arena, MemoryIndex size)
-{
-    Assert((arena->used + size) <= arena->size);
+    result.arena = arena;
+    result.used  = arena->used;
 
-    void *result = arena->base + arena->used;
-    arena->used += size;
+    ++arena->tempCount;
 
     return result;
 }
+
+inline void EndTemporaryMemory(TemporaryMemory memory)
+{
+    memory.arena->used = memory.used;
+
+    Assert(memory.arena->tempCount > 0);
+
+    --memory.arena->tempCount;
+}
+
+inline void CheckArena(MemoryArena *arena) { Assert(arena->tempCount == 0); }
 
 internal void GameOutputSound(GameState *gameState, GameSoundOutputBuffer *soundBuffer, int toneHz)
 {
@@ -167,121 +135,40 @@ internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x,
     return result;
 }
 
-internal V2 PointToScreen(GameOffscreenBuffer *buffer, Camera *camera, V2 point)
+internal void DrawEntity(Renderer *renderer, Camera *camera, V2 position, V2 dimensions, V4 color)
 {
-    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
-    V2 result       = point - camera->position;
-
-    result *= camera->zoom;
-    result += screenCenter;
-    result.y = buffer->height - result.y;
-
-    return result;
+    RendererDrawRectangle(renderer, camera->position, position, dimensions, color);
 }
 
-internal void DrawCell(GameOffscreenBuffer *buffer, Camera *camera, Cell *cell, V3 color)
-{
-    real32 sqrt3 = Sqrt(3);
-    V2 pos       = PointToScreen(buffer, camera, cell->position);
-
-    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * camera->zoom);
-    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * camera->zoom);
-    int32 minY = RoundReal32ToInt32(pos.y - camera->zoom);
-    int32 maxY = RoundReal32ToInt32(pos.y + camera->zoom);
-
-    if (minX < 0)
-    {
-        minX = 0;
-    }
-
-    if (maxX > buffer->width)
-    {
-        maxX = buffer->width;
-    }
-
-    if (minY < 0)
-    {
-        minY = 0;
-    }
-
-    if (maxY > buffer->height)
-    {
-        maxY = buffer->height;
-    }
-
-    real32 v = camera->zoom / 2;
-    real32 h = sqrt3 / 2 * camera->zoom;
-
-    uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
-    for (int32 y = minY; y < maxY; ++y)
-    {
-        uint32 *dest = (uint32 *)destRow;
-
-        for (int32 x = minX; x < maxX; ++x)
-        {
-            real32 q2x = Abs(x - pos.x);
-            real32 q2y = Abs(y - pos.y);
-
-            if (2 * v * h - v * q2x - h * q2y >= 0)
-            {
-                uint32 cellColor = (RoundReal32ToUint32(color.r * 255.0f) << 16) |
-                                   (RoundReal32ToUint32(color.g * 255.0f) << 8) |
-                                   (RoundReal32ToUint32(color.b * 255.0f) << 0);
-
-                *dest = cellColor;
-            }
-
-            ++dest;
-        }
-
-        destRow += buffer->pitch;
-    }
-}
-
-internal void DrawEntity(GameOffscreenBuffer *buffer, Camera *camera, V2 position, V2 dimensions,
-                         V3 color)
-{
-    V2 screenPosition = PointToScreen(buffer, camera, position);
-
-    V2 min = {screenPosition.x - dimensions.x * 0.5f * camera->zoom,
-              screenPosition.y - dimensions.y * 0.5f * camera->zoom};
-
-    V2 max = {screenPosition.x + dimensions.x * 0.5f * camera->zoom,
-              screenPosition.y + dimensions.y * 0.5f * camera->zoom};
-
-    DrawRectangle(buffer, min, max, color);
-}
-
-internal void DrawResource(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
+internal void DrawResource(Renderer *renderer, Camera *camera, V2 position)
 {
     V2 dimensions = {1.25f, 1.25f};
-    V3 color      = {0.5f, 0.0f, 0.5f};
+    V4 color      = {0.5f, 0.0f, 0.5f, 1.0f};
 
-    DrawEntity(buffer, camera, position, dimensions, color);
+    DrawEntity(renderer, camera, position, dimensions, color);
 }
 
-internal void DrawCity(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
+internal void DrawCity(Renderer *renderer, Camera *camera, V2 position)
 {
     V2 dimensions = {1.0f, 1.0f};
-    V3 color      = {0.5f, 0.5f, 0.5f};
+    V4 color      = {0.5f, 0.5f, 0.5f, 1.0f};
 
-    DrawEntity(buffer, camera, position, dimensions, color);
+    DrawEntity(renderer, camera, position, dimensions, color);
 }
 
-internal void DrawHero(GameOffscreenBuffer *buffer, Camera *camera, V2 position)
+internal void DrawHero(Renderer *renderer, Camera *camera, V2 position)
 {
     V2 dimensions = {0.5f, 0.5f};
-    V3 color      = {1.0f, 1.0f, 0.0f};
+    V4 color      = {1.0f, 1.0f, 0.0f, 1.0f};
 
-    DrawEntity(buffer, camera, position, dimensions, color);
+    DrawEntity(renderer, camera, position, dimensions, color);
 }
 
 internal Cell *GetCell(World *world, OffsetCoord coord)
 {
     Cell *result = 0;
 
-    if (coord.x > 0 && coord.x < (int32)world->width && coord.y > 0 &&
-        coord.y < (int32)world->height)
+    if (coord.x > 0 && coord.x < (int32)world->width && coord.y > 0 && coord.y < (int32)world->height)
     {
         result = &world->cells[coord.y * world->width + coord.x];
     }
@@ -297,63 +184,63 @@ internal Cell *GetCell(World *world, HexCoord coord)
     return result;
 }
 
-internal V3 BiomeColor(Biome biome)
+internal V4 BiomeColor(Biome biome)
 {
-    V3 result;
+    V4 result;
 
     switch (biome)
     {
         case GRASS:
         {
-            result = {0.18039215686f, 0.2862745098f, 0.10980392157f};
+            result = {0.18039215686f, 0.2862745098f, 0.10980392157f, 1.0f};
         }
         break;
 
         case DIRT:
         {
-            result = {0.38431372549f, 0.28235294118f, 0.18039215686f};
+            result = {0.38431372549f, 0.28235294118f, 0.18039215686f, 1.0f};
         }
         break;
 
         case LAVA:
         {
-            result = {0.20784313725f, 0.18039215686f, 0.18039215686f};
+            result = {0.20784313725f, 0.18039215686f, 0.18039215686f, 1.0f};
         }
         break;
 
         case ROUGH:
         {
-            result = {0.48235294118f, 0.37254901961f, 0.27450980392f};
+            result = {0.48235294118f, 0.37254901961f, 0.27450980392f, 1.0f};
         }
         break;
 
         case SAND:
         {
-            result = {0.76470588235f, 0.63137254902f, 0.47450980392f};
+            result = {0.76470588235f, 0.63137254902f, 0.47450980392f, 1.0f};
         }
         break;
 
         case SNOW:
         {
-            result = {0.92549019608f, 0.93725490196f, 0.93725490196f};
+            result = {0.92549019608f, 0.93725490196f, 0.93725490196f, 1.0f};
         }
         break;
 
         case WATER:
         {
-            result = {0.06274509804f, 0.17647058824f, 0.30196078431f};
+            result = {0.06274509804f, 0.17647058824f, 0.30196078431f, 1.0f};
         }
         break;
 
         case SWAMP:
         {
-            result = {0.17254901961f, 0.30980392157f, 0.20784313725f};
+            result = {0.17254901961f, 0.30980392157f, 0.20784313725f, 1.0f};
         }
         break;
 
         case ROCK:
         {
-            result = {0.36862745098f, 0.19607843137f, 0.07843137255f};
+            result = {0.36862745098f, 0.19607843137f, 0.07843137255f, 1.0f};
         }
         break;
     }
@@ -435,6 +322,16 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         memory->isInitialized = true;
     }
 
+    Assert(sizeof(TransientState) <= memory->transientStorageSize);
+    TransientState *transientState = (TransientState *)memory->transientStorage;
+    if (!transientState->isInitialized)
+    {
+        InitializeArena(&transientState->transientArena, memory->transientStorageSize - sizeof(TransientState),
+                        (uint8 *)memory->transientStorage + sizeof(TransientState));
+
+        transientState->isInitialized = true;
+    }
+
     World *world   = gameState->world;
     Editor *editor = &gameState->editor;
 
@@ -485,8 +382,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
         if (WasPressed(keyboard->save))
         {
-            memory->debugPlatformWriteEntireFile(thread, "world.map", gameState->worldArena.size,
-                                                 world);
+            memory->debugPlatformWriteEntireFile(thread, "world.map", gameState->worldArena.size, world);
         }
 
         if (WasPressed(keyboard->load))
@@ -533,8 +429,8 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     ddCameraZoom *= camera->zoomSpeed;
     ddCameraZoom += -camera->zoomFriction * camera->zoomVelocity;
 
-    camera->zoom = 0.5f * ddCameraZoom * Square(input->dtForFrame) +
-                   camera->zoomVelocity * input->dtForFrame + camera->zoom;
+    camera->zoom =
+        0.5f * ddCameraZoom * Square(input->dtForFrame) + camera->zoomVelocity * input->dtForFrame + camera->zoom;
     camera->zoomVelocity = ddCameraZoom * input->dtForFrame + camera->zoomVelocity;
 
     if (camera->zoom < camera->minZoom)
@@ -575,27 +471,28 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     ddCamera *= camera->speed * (1000.0f / camera->zoom);
     ddCamera += -camera->friction * camera->velocity;
 
-    camera->position = 0.5f * ddCamera * Square(input->dtForFrame) +
-                       camera->velocity * input->dtForFrame + camera->position;
+    camera->position =
+        0.5f * ddCamera * Square(input->dtForFrame) + camera->velocity * input->dtForFrame + camera->position;
     camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
 
-    V3 bgColor = {0.392f, 0.584f, 0.929f};
+    TemporaryMemory renderMemory = StartTemporaryMemory(&transientState->transientArena);
+    Renderer *renderer           = MakeRenderer(&transientState->transientArena, Megabytes(4), camera->zoom);
+
+    V4 bgColor = {0.392f, 0.584f, 0.929f, 1.0f};
 #if HEX_MAGIC_INTERNAL
     if (gameState->mode == EDIT)
     {
-        bgColor = {1.0f, 0.0f, 1.0f};
+        bgColor = {1.0f, 0.0f, 1.0f, 1.0f};
     }
 #endif
 
-    DrawRectangle(buffer, {0.0f, 0.0f}, {(real32)buffer->width, (real32)buffer->height}, bgColor);
+    RendererClear(renderer, bgColor);
 
     HexCoord cameraHexPos    = V2ToHex(camera->position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
     V2 mouseWorldPos     = ScreenToWorld(buffer, camera, mouse->x, mouse->y);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
-
-    V3 white = {1.0f, 1.0f, 1.0f};
 
     if (WasPressed(mouse->lButton))
     {
@@ -675,6 +572,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     }
 #endif
 
+    V4 white           = {1.0f, 1.0f, 1.0f, 1.0f};
     real32 innerRadius = Sqrt(3) / 2.0f;
     int32 xSpan        = CeilReal32ToInt32(buffer->width / (4 * innerRadius * camera->zoom)) + 2;
     int32 ySpan        = buffer->height / 3;
@@ -698,7 +596,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
 #endif
 
-                V3 color = BiomeColor(cell->biome);
+                V4 color = BiomeColor(cell->biome);
 
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
@@ -715,21 +613,21 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                     color = Lerp(color, white, 0.1f);
                 }
 
-                DrawCell(buffer, camera, cell, color);
+                RendererDrawHex(renderer, camera->position, cell->position, color);
 
                 if (cell->resourceIndex)
                 {
-                    DrawResource(buffer, camera, cell->position);
+                    DrawResource(renderer, camera, cell->position);
                 }
 
                 if (cell->cityIndex)
                 {
-                    DrawCity(buffer, camera, cell->position);
+                    DrawCity(renderer, camera, cell->position);
                 }
 
                 if (cell->heroIndex)
                 {
-                    DrawHero(buffer, camera, cell->position);
+                    DrawHero(renderer, camera, cell->position);
                 }
 
 #if HEX_MAGIC_INTERNAL
@@ -739,19 +637,19 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                     {
                         case ENTITY_RESOURCE:
                         {
-                            DrawResource(buffer, camera, cell->position);
+                            DrawResource(renderer, camera, cell->position);
                         }
                         break;
 
                         case ENTITY_CITY:
                         {
-                            DrawCity(buffer, camera, cell->position);
+                            DrawCity(renderer, camera, cell->position);
                         }
                         break;
 
                         case ENTITY_HERO:
                         {
-                            DrawHero(buffer, camera, cell->position);
+                            DrawHero(renderer, camera, cell->position);
                         }
                         break;
                     }
@@ -760,6 +658,13 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             }
         }
     }
+
+    RenderToOutput(buffer, renderer);
+
+    EndTemporaryMemory(renderMemory);
+
+    CheckArena(&gameState->worldArena);
+    CheckArena(&transientState->transientArena);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(gameGetSoundSamples)
