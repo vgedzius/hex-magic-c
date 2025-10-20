@@ -135,25 +135,17 @@ internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x,
     return result;
 }
 
-internal void DrawEntity(Renderer *renderer, Camera *camera, V2 position, V2 dimensions, V4 color)
-{
-    RendererDrawRectangle(renderer, camera->position, position, dimensions, color);
-}
-
 internal void DrawResource(Renderer *renderer, Camera *camera, V2 position)
 {
     V2 dimensions = {1.25f, 1.25f};
     V4 color      = {0.5f, 0.0f, 0.5f, 1.0f};
 
-    DrawEntity(renderer, camera, position, dimensions, color);
+    RendererDrawRectangle(renderer, camera->position, position, dimensions, color);
 }
 
-internal void DrawCity(Renderer *renderer, Camera *camera, V2 position)
+internal void DrawCity(GameState *state, Renderer *renderer, Camera *camera, V2 position)
 {
-    V2 dimensions = {1.0f, 1.0f};
-    V4 color      = {0.5f, 0.5f, 0.5f, 1.0f};
-
-    DrawEntity(renderer, camera, position, dimensions, color);
+    RendererDrawBitmap(renderer, camera->position, position, &state->city);
 }
 
 internal void DrawHero(Renderer *renderer, Camera *camera, V2 position)
@@ -161,7 +153,7 @@ internal void DrawHero(Renderer *renderer, Camera *camera, V2 position)
     V2 dimensions = {0.5f, 0.5f};
     V4 color      = {1.0f, 1.0f, 0.0f, 1.0f};
 
-    DrawEntity(renderer, camera, position, dimensions, color);
+    RendererDrawRectangle(renderer, camera->position, position, dimensions, color);
 }
 
 internal Cell *GetCell(World *world, OffsetCoord coord)
@@ -266,6 +258,97 @@ inline bool32 IsHeld(GameButtonState button)
     return result;
 }
 
+#pragma pack(push, 1)
+struct BitmapHeader
+{
+    uint16 fileType;
+    uint32 fileSize;
+    uint16 reserved1;
+    uint16 reserved2;
+    uint32 bitmapOffset;
+    uint32 size;
+    int32 width;
+    int32 height;
+    uint16 planes;
+    uint16 bitsPerPixel;
+    uint32 compression;
+    uint32 sizeOfBitmap;
+    int32 horzResolution;
+    int32 vertResolution;
+    uint32 colorsUsed;
+    uint32 colorsImportant;
+
+    uint32 redMask;
+    uint32 greenMask;
+    uint32 blueMask;
+};
+#pragma pack(pop)
+
+internal LoadedBitmap DEBUGLoadBMP(ThreadContext *thread, DEBUGPlatformReadEntireFile *readEntireFile, char *fileName)
+{
+    LoadedBitmap result            = {};
+    DebugReadFileResult readResult = readEntireFile(thread, fileName);
+
+    if (readResult.contentsSize != 0)
+    {
+        BitmapHeader *header = (BitmapHeader *)readResult.contents;
+        uint32 *pixels       = (uint32 *)((uint8 *)readResult.contents + header->bitmapOffset);
+
+        result.memory = pixels;
+        result.width  = header->width;
+        result.height = header->height;
+
+        Assert(header->compression == 3);
+
+        uint32 redMask   = header->redMask;
+        uint32 greenMask = header->greenMask;
+        uint32 blueMask  = header->blueMask;
+        uint32 alphaMask = ~(redMask | greenMask | blueMask);
+
+        BitScanResult redScan   = FindLeastSignificantSetBit(redMask);
+        BitScanResult greenScan = FindLeastSignificantSetBit(greenMask);
+        BitScanResult blueScan  = FindLeastSignificantSetBit(blueMask);
+        BitScanResult alphaScan = FindLeastSignificantSetBit(alphaMask);
+
+        Assert(redScan.found);
+        Assert(greenScan.found);
+        Assert(blueScan.found);
+        Assert(alphaScan.found);
+
+        int32 redShiftDown   = (int32)redScan.index;
+        int32 greenShiftDown = (int32)greenScan.index;
+        int32 blueShiftDown  = (int32)blueScan.index;
+        int32 alphaShiftDown = (int32)alphaScan.index;
+
+        uint32 *sourceDest = pixels;
+        for (int32 y = 0; y < header->height; ++y)
+        {
+            for (int32 x = 0; x < header->width; ++x)
+            {
+                uint32 c = *sourceDest;
+
+                real32 r  = (real32)((c & redMask) >> redShiftDown);
+                real32 g  = (real32)((c & greenMask) >> greenShiftDown);
+                real32 b  = (real32)((c & blueMask) >> blueShiftDown);
+                real32 a  = (real32)((c & alphaMask) >> alphaShiftDown);
+                real32 an = a / 255.0f;
+
+                r = r * an;
+                g = g * an;
+                b = b * an;
+
+                *sourceDest++ = (((uint32)(a + 0.5f) << 24) | ((uint32)(r + 0.5f) << 16) | ((uint32)(g + 0.5f) << 8) |
+                                 ((uint32)(b + 0.5f) << 0));
+            }
+        }
+    }
+
+    result.pitch  = -result.width * BITMAP_BYTES_PER_PIXEL;
+    result.memory = (uint8 *)result.memory - result.pitch * (result.height - 1);
+
+    return result;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 {
     Assert(sizeof(GameState) <= memory->permanentStorageSize);
@@ -276,7 +359,9 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         InitializeArena(&gameState->worldArena, memory->permanentStorageSize - sizeof(GameState),
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
-        gameState->camera.zoom         = 75.0f;
+        gameState->city = DEBUGLoadBMP(thread, memory->debugPlatformReadEntireFile, "assets/sprites/city.bmp");
+
+        gameState->camera.zoom         = 150.0f;
         gameState->camera.zoomVelocity = 0.0f;
         gameState->camera.zoomSpeed    = 7500.0f;
         gameState->camera.zoomFriction = 7.5f;
@@ -416,6 +501,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     Camera *camera = &gameState->camera;
 
+#if 0
     real32 ddCameraZoom = input->mouse.wheel;
     if (input->mouse.wheel > 0 && camera->zoom < camera->maxZoom)
     {
@@ -441,6 +527,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     {
         camera->zoom = camera->maxZoom;
     }
+#endif
 
     if (IsHeld(keyboard->moveDown) || mouse->y > buffer->height - mouseControlZone)
     {
@@ -622,7 +709,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                 if (cell->cityIndex)
                 {
-                    DrawCity(renderer, camera, cell->position);
+                    DrawCity(gameState, renderer, camera, cell->position);
                 }
 
                 if (cell->heroIndex)
@@ -643,7 +730,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                         case ENTITY_CITY:
                         {
-                            DrawCity(renderer, camera, cell->position);
+                            DrawCity(gameState, renderer, camera, cell->position);
                         }
                         break;
 

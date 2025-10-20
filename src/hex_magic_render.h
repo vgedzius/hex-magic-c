@@ -1,3 +1,4 @@
+#include "hex_magic.h"
 #if !defined(HEX_MAGIC_RENDER)
 
 #include "hex_magic_platform.h"
@@ -8,6 +9,7 @@ enum RendererEntryType
     RENDERER_ENTRY_CLEAR,
     RENDERER_ENTRY_RECTANGLE,
     RENDERER_ENTRY_HEX,
+    RENDERER_ENTRY_BITMAP,
 };
 
 struct RendererBasis
@@ -43,6 +45,15 @@ struct RendererEntryHex
 
     V2 position;
     V4 color;
+};
+
+struct RendererEntryBitmap
+{
+    RendererEntryHeader header;
+    RendererBasis basis;
+
+    V2 position;
+    LoadedBitmap *bitmap;
 };
 
 struct Renderer

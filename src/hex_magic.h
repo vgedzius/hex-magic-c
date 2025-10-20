@@ -5,6 +5,8 @@
 #include "hex_magic_intrinsics.h"
 #include "hex_magic_hex.h"
 
+#define BITMAP_BYTES_PER_PIXEL 4
+
 struct MemoryArena
 {
     MemoryIndex size;
@@ -123,6 +125,14 @@ struct Editor
     EntityType brushEntity;
 };
 
+struct LoadedBitmap
+{
+    int32 width;
+    int32 height;
+    int32 pitch;
+    void *memory;
+};
+
 struct GameState
 {
     MemoryArena worldArena;
@@ -132,6 +142,8 @@ struct GameState
 
     GameMode mode;
     Editor editor;
+
+    LoadedBitmap city;
 };
 
 struct TransientState

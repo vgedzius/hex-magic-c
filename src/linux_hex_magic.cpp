@@ -16,8 +16,8 @@ global LinuxOffscreenBuffer globalBackBuffer;
 global LinuxAudioRingBuffer audioBuffer;
 global uint64 globalPerfCountFrequency;
 
-internal void CatStrings(size_t sourceACount, const char *sourceA, size_t sourceBCount,
-                         const char *sourceB, size_t destCount, char *dest)
+internal void CatStrings(size_t sourceACount, const char *sourceA, size_t sourceBCount, const char *sourceB,
+                         size_t destCount, char *dest)
 {
     for (uint32 index = 0; index < sourceACount; ++index)
     {
@@ -57,15 +57,13 @@ internal int StringLength(const char *string)
     return count;
 }
 
-internal void LinuxBuildExecDirFileName(LinuxState *state, const char *fileName, int destCount,
-                                        char *dest)
+internal void LinuxBuildExecDirFileName(LinuxState *state, const char *fileName, int destCount, char *dest)
 {
-    CatStrings(state->onePastLastExecFileNameSlash - state->executableFileName,
-               state->executableFileName, StringLength(fileName), fileName, destCount, dest);
+    CatStrings(state->onePastLastExecFileNameSlash - state->executableFileName, state->executableFileName,
+               StringLength(fileName), fileName, destCount, dest);
 }
 
-internal void LinuxResizeBackBuffer(LinuxOffscreenBuffer *buffer, SDL_Renderer *renderer, int width,
-                                    int height)
+internal void LinuxResizeBackBuffer(LinuxOffscreenBuffer *buffer, SDL_Renderer *renderer, int width, int height)
 {
     if (buffer->renderTexture)
     {
@@ -82,8 +80,8 @@ internal void LinuxResizeBackBuffer(LinuxOffscreenBuffer *buffer, SDL_Renderer *
     buffer->bytesPerPixel = 4;
     buffer->pitch         = width * buffer->bytesPerPixel;
 
-    buffer->renderTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                                              SDL_TEXTUREACCESS_STREAMING, width, height);
+    buffer->renderTexture =
+        SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 
     if (!buffer->renderTexture)
     {
@@ -91,8 +89,8 @@ internal void LinuxResizeBackBuffer(LinuxOffscreenBuffer *buffer, SDL_Renderer *
         // TODO terminate or smth?
     }
 
-    buffer->memory = mmap(0, buffer->width * buffer->height * buffer->bytesPerPixel,
-                          PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    buffer->memory = mmap(0, buffer->width * buffer->height * buffer->bytesPerPixel, PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if (buffer->memory == MAP_FAILED)
     {
@@ -101,9 +99,8 @@ internal void LinuxResizeBackBuffer(LinuxOffscreenBuffer *buffer, SDL_Renderer *
     }
 }
 
-internal void LinuxFillSoundBuffer(LinuxSoundOutput *soundOutput,
-                                   GameSoundOutputBuffer *sourceBuffer, uint32 byteToLock,
-                                   uint32 bytesToWrite)
+internal void LinuxFillSoundBuffer(LinuxSoundOutput *soundOutput, GameSoundOutputBuffer *sourceBuffer,
+                                   uint32 byteToLock, uint32 bytesToWrite)
 {
     SDL_LockAudio();
 
@@ -140,8 +137,7 @@ internal void LinuxFillSoundBuffer(LinuxSoundOutput *soundOutput,
     SDL_UnlockAudio();
 }
 
-internal void LinuxDisplayBufferInWindow(LinuxState *state, LinuxOffscreenBuffer *buffer,
-                                         SDL_Renderer *renderer)
+internal void LinuxDisplayBufferInWindow(LinuxState *state, LinuxOffscreenBuffer *buffer, SDL_Renderer *renderer)
 {
     void *pixels;
     int pitch;
@@ -204,8 +200,7 @@ internal void LinuxInitSound(uint32 samplesPerSecond, uint32 bufferSize)
     audioSpec.userdata = &audioBuffer;
 
     audioBuffer.size = bufferSize;
-    audioBuffer.data =
-        mmap(0, bufferSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    audioBuffer.data = mmap(0, bufferSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     // TODO technicaly we can still run the game without the audio. Should
     // handle this properly
@@ -338,8 +333,7 @@ inline real32 LinuxGetSecondsElapsed(uint64 oldCounter, uint64 currentCounter)
     return result;
 }
 
-internal void LinuxDebugDrawVertical(LinuxOffscreenBuffer *backBuffer, int x, int top, int bottom,
-                                     uint32 color)
+internal void LinuxDebugDrawVertical(LinuxOffscreenBuffer *backBuffer, int x, int top, int bottom, uint32 color)
 {
     if (top <= 0)
     {
@@ -353,8 +347,7 @@ internal void LinuxDebugDrawVertical(LinuxOffscreenBuffer *backBuffer, int x, in
 
     if ((x >= 0) && (x < backBuffer->width))
     {
-        uint8 *pixel =
-            (uint8 *)backBuffer->memory + x * backBuffer->bytesPerPixel + top * backBuffer->pitch;
+        uint8 *pixel = (uint8 *)backBuffer->memory + x * backBuffer->bytesPerPixel + top * backBuffer->pitch;
         for (int y = top; y < bottom; ++y)
         {
             *(uint32 *)pixel = color;
@@ -363,9 +356,8 @@ internal void LinuxDebugDrawVertical(LinuxOffscreenBuffer *backBuffer, int x, in
     }
 }
 
-inline void LinuxDebugDrawSoundBufferMarker(LinuxOffscreenBuffer *backBuffer,
-                                            LinuxSoundOutput *soundOutput, real32 c, int padX,
-                                            int top, int bottom, uint32 value, uint32 color)
+inline void LinuxDebugDrawSoundBufferMarker(LinuxOffscreenBuffer *backBuffer, LinuxSoundOutput *soundOutput, real32 c,
+                                            int padX, int top, int bottom, uint32 value, uint32 color)
 {
     real32 xReal32 = c * (real32)value;
     int x          = padX + (int)xReal32;
@@ -465,16 +457,14 @@ internal LinuxGameCode LinuxLoadGameCode(char *gameSoFileName)
 
     if (result.gameLib)
     {
-        result.updateAndRender =
-            (GameUpdateAndRender *)dlsym(result.gameLib, "gameUpdateAndRender");
+        result.updateAndRender = (GameUpdateAndRender *)dlsym(result.gameLib, "gameUpdateAndRender");
 
         if (!result.updateAndRender)
         {
             printf("Failed to load GameUpdateAndRender: %s\n", dlerror());
         }
 
-        result.getSoundSamples =
-            (GameGetSoundSamples *)dlsym(result.gameLib, "gameGetSoundSamples");
+        result.getSoundSamples = (GameGetSoundSamples *)dlsym(result.gameLib, "gameGetSoundSamples");
 
         if (!result.getSoundSamples)
         {
@@ -734,9 +724,8 @@ int main(int argc, char *args[])
         return 1;
     }
 
-    SDL_Window *window =
-        SDL_CreateWindow("Hex magic", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, initWidth,
-                         initHeight, SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Hex magic", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, initWidth,
+                                          initHeight, SDL_WINDOW_RESIZABLE);
 
     if (!window)
     {
@@ -744,8 +733,7 @@ int main(int argc, char *args[])
         return 1;
     }
 
-    SDL_Renderer *renderer =
-        SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     if (!renderer)
     {
@@ -776,16 +764,15 @@ int main(int argc, char *args[])
     soundOutput.bytesPerSample      = sizeof(int16) * 2;
     soundOutput.secondaryBufferSize = soundOutput.samplesPerSecond * soundOutput.bytesPerSample;
     soundOutput.latencySampleCount  = 2 * (soundOutput.samplesPerSecond / gameUpdateHz);
-    soundOutput.safetyBytes         = (int)(((real32)soundOutput.samplesPerSecond *
-                                     (real32)soundOutput.bytesPerSample / gameUpdateHz) /
-                                    3.0f);
+    soundOutput.safetyBytes =
+        (int)(((real32)soundOutput.samplesPerSecond * (real32)soundOutput.bytesPerSample / gameUpdateHz) / 3.0f);
 
     LinuxInitSound(soundOutput.samplesPerSecond, soundOutput.secondaryBufferSize);
 
     SDL_PauseAudio(0);
 
-    int16 *samples = (int16 *)mmap(0, soundOutput.secondaryBufferSize, PROT_READ | PROT_WRITE,
-                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    int16 *samples =
+        (int16 *)mmap(0, soundOutput.secondaryBufferSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     globalIsRunning = true;
 
@@ -802,13 +789,12 @@ int main(int argc, char *args[])
     gameMemory.debugPlatformReadEntireFile  = debugPlatformReadEntireFile;
     gameMemory.debugPlatformWriteEntireFile = debugPlatformWriteEntireFile;
 
-    linuxState.totalSize       = gameMemory.permanentStorageSize + gameMemory.transientStorageSize;
-    linuxState.gameMemoryBlock = mmap(baseAddress, (size_t)linuxState.totalSize,
-                                      PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    linuxState.totalSize = gameMemory.permanentStorageSize + gameMemory.transientStorageSize;
+    linuxState.gameMemoryBlock =
+        mmap(baseAddress, (size_t)linuxState.totalSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     gameMemory.permanentStorage = linuxState.gameMemoryBlock;
-    gameMemory.transientStorage =
-        (uint8 *)gameMemory.permanentStorage + gameMemory.permanentStorageSize;
+    gameMemory.transientStorage = (uint8 *)gameMemory.permanentStorage + gameMemory.permanentStorageSize;
 
     if (!samples || !gameMemory.permanentStorage || !gameMemory.transientStorage)
     {
@@ -865,11 +851,9 @@ int main(int argc, char *args[])
         GameKeyboardInput *newKeyboardInput = &newInput->keyboard;
         *newKeyboardInput                   = {};
 
-        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newKeyboardInput->buttons);
-             ++buttonIndex)
+        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newKeyboardInput->buttons); ++buttonIndex)
         {
-            newKeyboardInput->buttons[buttonIndex].endedDown =
-                oldKeyboardInput->buttons[buttonIndex].endedDown;
+            newKeyboardInput->buttons[buttonIndex].endedDown = oldKeyboardInput->buttons[buttonIndex].endedDown;
         }
 
         GameMouseInput *oldMouseInput = &oldInput->mouse;
@@ -879,11 +863,9 @@ int main(int argc, char *args[])
         newMouseInput->x = oldMouseInput->x;
         newMouseInput->y = oldMouseInput->y;
 
-        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newMouseInput->buttons);
-             ++buttonIndex)
+        for (uint32 buttonIndex = 0; buttonIndex < ArrayCount(newMouseInput->buttons); ++buttonIndex)
         {
-            newMouseInput->buttons[buttonIndex].endedDown =
-                oldMouseInput->buttons[buttonIndex].endedDown;
+            newMouseInput->buttons[buttonIndex].endedDown = oldMouseInput->buttons[buttonIndex].endedDown;
         }
 
         LinuxProcessEvents(window, renderer, &linuxState, newKeyboardInput, newMouseInput);
@@ -916,18 +898,16 @@ int main(int argc, char *args[])
                 soundIsValid                   = true;
             }
 
-            uint32 byteToLock = (soundOutput.runningSampleIndex * soundOutput.bytesPerSample) %
-                                soundOutput.secondaryBufferSize;
+            uint32 byteToLock =
+                (soundOutput.runningSampleIndex * soundOutput.bytesPerSample) % soundOutput.secondaryBufferSize;
 
             uint32 expectedSoundBytesPerFrame =
-                (int)((real32)(soundOutput.samplesPerSecond * soundOutput.bytesPerSample) /
-                      gameUpdateHz);
+                (int)((real32)(soundOutput.samplesPerSecond * soundOutput.bytesPerSample) / gameUpdateHz);
 
             real32 secondsLeftUntilFlip = targetSecondsPerFrame - fromBeginToAudioSeconds;
 
             uint32 expectebBytesUntilFlip =
-                (uint32)((secondsLeftUntilFlip / targetSecondsPerFrame) *
-                         (real32)expectedSoundBytesPerFrame);
+                (uint32)((secondsLeftUntilFlip / targetSecondsPerFrame) * (real32)expectedSoundBytesPerFrame);
 
             uint32 expectedFrameBoundaryByte = playCursor + expectebBytesUntilFlip;
             uint32 safeWriteCuror            = writeCursor;
@@ -947,8 +927,7 @@ int main(int argc, char *args[])
             }
             else
             {
-                targetCursor =
-                    audioBuffer.writeCursor + expectedSoundBytesPerFrame + soundOutput.safetyBytes;
+                targetCursor = audioBuffer.writeCursor + expectedSoundBytesPerFrame + soundOutput.safetyBytes;
             }
             targetCursor = targetCursor % soundOutput.secondaryBufferSize;
 
