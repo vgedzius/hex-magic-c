@@ -148,12 +148,9 @@ internal void DrawCity(GameState *state, Renderer *renderer, Camera *camera, V2 
     RendererDrawBitmap(renderer, camera->position, position, &state->city);
 }
 
-internal void DrawHero(Renderer *renderer, Camera *camera, V2 position)
+internal void DrawHero(GameState *state, Renderer *renderer, Camera *camera, V2 position)
 {
-    V2 dimensions = {0.5f, 0.5f};
-    V4 color      = {1.0f, 1.0f, 0.0f, 1.0f};
-
-    RendererDrawRectangle(renderer, camera->position, position, dimensions, color);
+    RendererDrawBitmap(renderer, camera->position, position, &state->hero);
 }
 
 internal Cell *GetCell(World *world, OffsetCoord coord)
@@ -360,6 +357,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
         gameState->city = DEBUGLoadBMP(thread, memory->debugPlatformReadEntireFile, "assets/sprites/city.bmp");
+        gameState->hero = DEBUGLoadBMP(thread, memory->debugPlatformReadEntireFile, "assets/sprites/hero.bmp");
 
         gameState->camera.zoom         = 150.0f;
         gameState->camera.zoomVelocity = 0.0f;
@@ -714,7 +712,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                 if (cell->heroIndex)
                 {
-                    DrawHero(renderer, camera, cell->position);
+                    DrawHero(gameState, renderer, camera, cell->position);
                 }
 
 #if HEX_MAGIC_INTERNAL
@@ -736,7 +734,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                         case ENTITY_HERO:
                         {
-                            DrawHero(renderer, camera, cell->position);
+                            DrawHero(gameState, renderer, camera, cell->position);
                         }
                         break;
                     }

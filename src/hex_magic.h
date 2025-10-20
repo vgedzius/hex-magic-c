@@ -144,6 +144,7 @@ struct GameState
     Editor editor;
 
     LoadedBitmap city;
+    LoadedBitmap hero;
 };
 
 struct TransientState
