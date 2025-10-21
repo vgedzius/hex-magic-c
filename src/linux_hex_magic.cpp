@@ -812,9 +812,6 @@ int main(int argc, char *args[])
     real64 currentSecond   = 0.0f;
     real32 secondsPerFrame = 0.0f;
 
-    uint32 debugTimeMarkerIndex               = 0;
-    LinuxDebugTimeMarker debugTimeMarkers[30] = {};
-
     uint32 audioLatencyBytes   = 0;
     real32 audioLatencySeconds = 0;
     bool32 soundIsValid        = false;
@@ -879,7 +876,6 @@ int main(int argc, char *args[])
             buffer.width               = globalBackBuffer.width;
             buffer.height              = globalBackBuffer.height;
             buffer.pitch               = globalBackBuffer.pitch;
-            buffer.bytesPerPixel       = globalBackBuffer.bytesPerPixel;
 
             if (game.updateAndRender)
             {
@@ -952,30 +948,6 @@ int main(int argc, char *args[])
                 game.getSoundSamples(&thread, &gameMemory, &soundBuffer);
             }
 
-#if HEX_MAGIC_INTERNAL
-            LinuxDebugTimeMarker *marker = &debugTimeMarkers[debugTimeMarkerIndex];
-            marker->outputPlayCursor     = playCursor;
-            marker->outputWriteCursor    = writeCursor;
-            marker->outputLocation       = byteToLock;
-            marker->outputByteCount      = bytesToWrite;
-            marker->expectedFlipCursor   = expectedFrameBoundaryByte;
-
-            // uint32 unwrappedWriteCursor = audioBuffer.writeCursor;
-            // if (unwrappedWriteCursor < audioBuffer.playCursor)
-            // {
-            //     unwrappedWriteCursor += soundOutput.secondaryBufferSize;
-            // }
-            // audioLatencyBytes   = unwrappedWriteCursor - audioBuffer.playCursor;
-            // audioLatencySeconds = (real32)audioLatencyBytes /
-            // (real32)soundOutput.bytesPerSample
-            // /
-            //                       (real32)soundOutput.samplesPerSecond;
-            //
-            // printf("BTL:%u TC:%u BTW: %u - PC:%u WC:%u DELTA:%u (%fs)\n", byteToLock,
-            // targetCursor,
-            //        bytesToWrite, playCursor, writeCursor, audioLatencyBytes,
-            //        audioLatencySeconds);
-#endif
             LinuxFillSoundBuffer(&soundOutput, &soundBuffer, byteToLock, bytesToWrite);
 
             uint64 endCounter = SDL_GetPerformanceCounter();
@@ -1012,27 +984,9 @@ int main(int argc, char *args[])
 
             flpWallClock = SDL_GetPerformanceCounter();
 
-#if HEX_MAGIC_INTERNAL
-            {
-                Assert(debugTimeMarkerIndex < ArrayCount(debugTimeMarkers));
-                LinuxDebugTimeMarker *marker = &debugTimeMarkers[debugTimeMarkerIndex];
-
-                marker->flipPlayCursor  = audioBuffer.playCursor;
-                marker->flipWriteCursor = audioBuffer.writeCursor;
-            }
-#endif
-
             GameInput *temp = newInput;
             newInput        = oldInput;
             oldInput        = temp;
-
-#if HEX_MAGIC_INTERNAL
-            ++debugTimeMarkerIndex;
-            if (debugTimeMarkerIndex == ArrayCount(debugTimeMarkers))
-            {
-                debugTimeMarkerIndex = 0;
-            }
-#endif
         }
     }
 

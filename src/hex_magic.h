@@ -125,7 +125,7 @@ struct Editor
     EntityType brushEntity;
 };
 
-struct LoadedBitmap
+struct Bitmap
 {
     int32 width;
     int32 height;
@@ -143,8 +143,18 @@ struct GameState
     GameMode mode;
     Editor editor;
 
-    LoadedBitmap city;
-    LoadedBitmap hero;
+    Bitmap city;
+    Bitmap hero;
+
+    Bitmap grassTexture;
+    Bitmap dirtTexture;
+    Bitmap lavaTexture;
+    Bitmap roughTexture;
+    Bitmap sandTexture;
+    Bitmap snowTexture;
+    Bitmap swampTexture;
+    Bitmap waterTexture;
+    Bitmap rockTexture;
 };
 
 struct TransientState

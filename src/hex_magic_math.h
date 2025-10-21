@@ -34,10 +34,24 @@ union V4
     };
     struct
     {
-        real32 r, g, b, a;
+        union
+        {
+            V3 rgb;
+            struct
+            {
+                real32 r, g, b;
+            };
+        };
+        real32 a;
     };
-    real32 e[3];
+    real32 e[4];
 };
+
+inline V2 v2(int32 x, int32 y)
+{
+    V2 result = {(real32)x, (real32)y};
+    return result;
+}
 
 // Scalar operations
 

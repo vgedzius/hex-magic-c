@@ -1,4 +1,5 @@
 #include "hex_magic.h"
+#include "hex_magic_intrinsics.h"
 #include "hex_magic_platform.h"
 #include "hex_magic_render.h"
 
@@ -40,7 +41,7 @@ internal void RendererClear(Renderer *renderer, V4 color)
     }
 }
 
-internal void RendererDrawRectangle(Renderer *renderer, V2 basePosition, V2 position, V2 dimensions, V4 color)
+internal void RendererPushRectangle(Renderer *renderer, V2 basePosition, V2 position, V2 dimensions, V4 color)
 {
     RendererEntryRectangle *entry = PushRenderElement(renderer, RendererEntryRectangle, RENDERER_ENTRY_RECTANGLE);
 
@@ -53,7 +54,7 @@ internal void RendererDrawRectangle(Renderer *renderer, V2 basePosition, V2 posi
     }
 }
 
-internal void RendererDrawHex(Renderer *renderer, V2 basePosition, V2 position, V4 color)
+internal void RendererPushHex(Renderer *renderer, V2 basePosition, V2 position, V4 color, Bitmap *texture)
 {
     RendererEntryHex *entry = PushRenderElement(renderer, RendererEntryHex, RENDERER_ENTRY_HEX);
 
@@ -62,10 +63,11 @@ internal void RendererDrawHex(Renderer *renderer, V2 basePosition, V2 position, 
         entry->basis.position = basePosition;
         entry->position       = position;
         entry->color          = color;
+        entry->texture        = texture;
     }
 }
 
-internal void RendererDrawBitmap(Renderer *renderer, V2 basePosition, V2 position, LoadedBitmap *bitmap)
+internal void RendererPushBitmap(Renderer *renderer, V2 basePosition, V2 position, Bitmap *bitmap)
 {
     RendererEntryBitmap *entry = PushRenderElement(renderer, RendererEntryBitmap, RENDERER_ENTRY_BITMAP);
 
@@ -107,7 +109,7 @@ internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, V4 c)
     uint32 color = (RoundReal32ToUint32(c.a * 255.0f) << 24) | (RoundReal32ToUint32(c.r * 255.0f) << 16) |
                    (RoundReal32ToUint32(c.g * 255.0f) << 8) | (RoundReal32ToUint32(c.b * 255.0f) << 0);
 
-    uint8 *row = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
+    uint8 *row = (uint8 *)buffer->memory + minX * BITMAP_BYTES_PER_PIXEL + minY * buffer->pitch;
     for (int y = minY; y < maxY; ++y)
     {
         uint32 *pixel = (uint32 *)row;
@@ -120,14 +122,14 @@ internal void DrawRectangle(GameOffscreenBuffer *buffer, V2 vMin, V2 vMax, V4 c)
     }
 }
 
-internal void DrawHex(GameOffscreenBuffer *buffer, V2 pos, real32 size, V4 color)
+internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 baseP, real32 scale, V4 color, Bitmap *texture)
 {
     real32 sqrt3 = Sqrt(3);
 
-    int32 minX = RoundReal32ToInt32(pos.x - sqrt3 / 2.0f * size);
-    int32 maxX = RoundReal32ToInt32(pos.x + sqrt3 / 2.0f * size);
-    int32 minY = RoundReal32ToInt32(pos.y - size);
-    int32 maxY = RoundReal32ToInt32(pos.y + size);
+    int32 minX = RoundReal32ToInt32(screenP.x - sqrt3 / 2.0f * scale);
+    int32 maxX = RoundReal32ToInt32(screenP.x + sqrt3 / 2.0f * scale);
+    int32 minY = RoundReal32ToInt32(screenP.y - scale);
+    int32 maxY = RoundReal32ToInt32(screenP.y + scale);
 
     if (minX < 0)
     {
@@ -149,26 +151,61 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 pos, real32 size, V4 color
         maxY = buffer->height;
     }
 
-    real32 v = 0.5f * size;
-    real32 h = sqrt3 / 2 * size;
+    real32 v = 0.5 * scale;
+    real32 h = 0.5 * sqrt3 * scale;
 
-    uint8 *destRow = (uint8 *)buffer->memory + minX * buffer->bytesPerPixel + minY * buffer->pitch;
+    real32 invTextureWorldSize = 1.0 / (2.0 * scale);
+
+    uint8 *destRow = (uint8 *)buffer->memory + minX * BITMAP_BYTES_PER_PIXEL + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
     {
         uint32 *dest = (uint32 *)destRow;
 
         for (int32 x = minX; x < maxX; ++x)
         {
-            real32 q2x = Abs(x - pos.x);
-            real32 q2y = Abs(y - pos.y);
+            real32 q2x = Abs(x - screenP.x);
+            real32 q2y = Abs(y - screenP.y);
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
-                uint32 cellColor =
-                    (RoundReal32ToUint32(color.a * 255.0f) << 24) | (RoundReal32ToUint32(color.r * 255.0f) << 16) |
-                    (RoundReal32ToUint32(color.g * 255.0f) << 8) | (RoundReal32ToUint32(color.b * 255.0f) << 0);
+                V2 uv = invTextureWorldSize * (v2(x, -y) + scale * baseP);
 
-                *dest = cellColor;
+                uv.x -= FloorReal32ToInt32(uv.x);
+                uv.y -= FloorReal32ToInt32(uv.y);
+
+                int32 texX = (int32)(uv.x * (texture->width - 1));
+                int32 texY = (int32)(uv.y * (texture->height - 1));
+
+                Assert(texX >= 0 && texX < texture->width);
+                Assert(texY >= 0 && texY < texture->height);
+
+                uint8 *texelPtr = (uint8 *)texture->memory + texY * texture->pitch + texX * BITMAP_BYTES_PER_PIXEL;
+                uint32 source   = *(uint32 *)(texelPtr);
+
+                V4 texel = {
+                    (real32)((source >> 16) & 0xFF),
+                    (real32)((source >> 8) & 0xFF),
+                    (real32)((source >> 0) & 0xFF),
+                    (real32)((source >> 24) & 0xFF),
+                };
+
+                V4 d = {
+                    (real32)((*dest >> 16) & 0xFF),
+                    (real32)((*dest >> 8) & 0xFF),
+                    (real32)((*dest >> 0) & 0xFF),
+                    (real32)((*dest >> 24) & 0xFF),
+                };
+
+                V4 result = (1.0f - texel.a / 255.0f) * d + texel;
+
+#if 1
+                *dest = (((uint32)(result.a + 0.5f) << 24) | ((uint32)(result.r + 0.5f) << 16) |
+                         ((uint32)(result.g + 0.5f) << 8) | ((uint32)(result.b + 0.5f) << 0));
+#else
+
+                *dest = (((uint32)(color.a + 0.5f) << 24) | ((uint32)(color.r + 0.5f) << 16) |
+                         ((uint32)(color.g + 0.5f) << 8) | ((uint32)(color.b + 0.5f) << 0));
+#endif
             }
 
             ++dest;
@@ -178,7 +215,7 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 pos, real32 size, V4 color
     }
 }
 
-internal void DrawBitmap(GameOffscreenBuffer *buffer, LoadedBitmap *bitmap, V2 position)
+internal void DrawBitmap(GameOffscreenBuffer *buffer, Bitmap *bitmap, V2 position)
 {
     int32 minX = RoundReal32ToInt32(position.x);
     int32 minY = RoundReal32ToInt32(position.y);
@@ -299,7 +336,8 @@ internal void RenderToOutput(GameOffscreenBuffer *output, Renderer *renderer)
                 RendererEntryHex *render = (RendererEntryHex *)baseEntry;
                 V2 screenPosition        = PointToScreen(output, renderer, render->basis.position, render->position);
 
-                DrawHex(output, screenPosition, renderer->scale, render->color);
+                DrawHex(output, screenPosition, render->basis.position, renderer->scale, render->color,
+                        render->texture);
 
                 baseAddress += sizeof(*render);
             }

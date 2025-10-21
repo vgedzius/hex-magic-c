@@ -140,17 +140,17 @@ internal void DrawResource(Renderer *renderer, Camera *camera, V2 position)
     V2 dimensions = {1.25f, 1.25f};
     V4 color      = {0.5f, 0.0f, 0.5f, 1.0f};
 
-    RendererDrawRectangle(renderer, camera->position, position, dimensions, color);
+    RendererPushRectangle(renderer, camera->position, position, dimensions, color);
 }
 
 internal void DrawCity(GameState *state, Renderer *renderer, Camera *camera, V2 position)
 {
-    RendererDrawBitmap(renderer, camera->position, position, &state->city);
+    RendererPushBitmap(renderer, camera->position, position, &state->city);
 }
 
 internal void DrawHero(GameState *state, Renderer *renderer, Camera *camera, V2 position)
 {
-    RendererDrawBitmap(renderer, camera->position, position, &state->hero);
+    RendererPushBitmap(renderer, camera->position, position, &state->hero);
 }
 
 internal Cell *GetCell(World *world, OffsetCoord coord)
@@ -173,65 +173,70 @@ internal Cell *GetCell(World *world, HexCoord coord)
     return result;
 }
 
-internal V4 BiomeColor(Biome biome)
+internal Bitmap *BiomeTexture(GameState *state, Biome biome)
 {
-    V4 result;
+    Bitmap *result;
 
     switch (biome)
     {
         case GRASS:
         {
-            result = {0.18039215686f, 0.2862745098f, 0.10980392157f, 1.0f};
+            result = &state->grassTexture;
         }
         break;
 
         case DIRT:
         {
-            result = {0.38431372549f, 0.28235294118f, 0.18039215686f, 1.0f};
+            result = &state->dirtTexture;
         }
         break;
 
         case LAVA:
         {
-            result = {0.20784313725f, 0.18039215686f, 0.18039215686f, 1.0f};
+            result = &state->lavaTexture;
         }
         break;
 
         case ROUGH:
         {
-            result = {0.48235294118f, 0.37254901961f, 0.27450980392f, 1.0f};
+            result = &state->roughTexture;
         }
         break;
 
         case SAND:
         {
-            result = {0.76470588235f, 0.63137254902f, 0.47450980392f, 1.0f};
+            result = &state->sandTexture;
         }
         break;
 
         case SNOW:
         {
-            result = {0.92549019608f, 0.93725490196f, 0.93725490196f, 1.0f};
+            result = &state->snowTexture;
         }
         break;
 
         case WATER:
         {
-            result = {0.06274509804f, 0.17647058824f, 0.30196078431f, 1.0f};
+            result = &state->waterTexture;
         }
         break;
 
         case SWAMP:
         {
-            result = {0.17254901961f, 0.30980392157f, 0.20784313725f, 1.0f};
+            result = &state->swampTexture;
         }
         break;
 
         case ROCK:
         {
-            result = {0.36862745098f, 0.19607843137f, 0.07843137255f, 1.0f};
+            result = &state->rockTexture;
         }
         break;
+
+        default:
+        {
+            InvalidCodePath;
+        }
     }
 
     return result;
@@ -281,9 +286,9 @@ struct BitmapHeader
 };
 #pragma pack(pop)
 
-internal LoadedBitmap DEBUGLoadBMP(ThreadContext *thread, DEBUGPlatformReadEntireFile *readEntireFile, char *fileName)
+internal Bitmap DEBUGLoadBMP(ThreadContext *thread, DEBUGPlatformReadEntireFile *readEntireFile, char *fileName)
 {
-    LoadedBitmap result            = {};
+    Bitmap result                  = {};
     DebugReadFileResult readResult = readEntireFile(thread, fileName);
 
     if (readResult.contentsSize != 0)
@@ -312,10 +317,10 @@ internal LoadedBitmap DEBUGLoadBMP(ThreadContext *thread, DEBUGPlatformReadEntir
         Assert(blueScan.found);
         Assert(alphaScan.found);
 
-        int32 redShiftDown   = (int32)redScan.index;
-        int32 greenShiftDown = (int32)greenScan.index;
-        int32 blueShiftDown  = (int32)blueScan.index;
-        int32 alphaShiftDown = (int32)alphaScan.index;
+        int32 redShift   = (int32)redScan.index;
+        int32 greenShift = (int32)greenScan.index;
+        int32 blueShift  = (int32)blueScan.index;
+        int32 alphaShift = (int32)alphaScan.index;
 
         uint32 *sourceDest = pixels;
         for (int32 y = 0; y < header->height; ++y)
@@ -324,18 +329,17 @@ internal LoadedBitmap DEBUGLoadBMP(ThreadContext *thread, DEBUGPlatformReadEntir
             {
                 uint32 c = *sourceDest;
 
-                real32 r  = (real32)((c & redMask) >> redShiftDown);
-                real32 g  = (real32)((c & greenMask) >> greenShiftDown);
-                real32 b  = (real32)((c & blueMask) >> blueShiftDown);
-                real32 a  = (real32)((c & alphaMask) >> alphaShiftDown);
-                real32 an = a / 255.0f;
+                V4 texel = {
+                    (real32)((c & redMask) >> redShift),
+                    (real32)((c & greenMask) >> greenShift),
+                    (real32)((c & blueMask) >> blueShift),
+                    (real32)((c & alphaMask) >> alphaShift),
+                };
 
-                r = r * an;
-                g = g * an;
-                b = b * an;
+                texel.rgb *= texel.a / 255.0f;
 
-                *sourceDest++ = (((uint32)(a + 0.5f) << 24) | ((uint32)(r + 0.5f) << 16) | ((uint32)(g + 0.5f) << 8) |
-                                 ((uint32)(b + 0.5f) << 0));
+                *sourceDest++ = (((uint32)(texel.a + 0.5f) << 24) | ((uint32)(texel.r + 0.5f) << 16) |
+                                 ((uint32)(texel.g + 0.5f) << 8) | ((uint32)(texel.b + 0.5f) << 0));
             }
         }
     }
@@ -356,8 +360,21 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         InitializeArena(&gameState->worldArena, memory->permanentStorageSize - sizeof(GameState),
                         (uint8 *)memory->permanentStorage + sizeof(GameState));
 
-        gameState->city = DEBUGLoadBMP(thread, memory->debugPlatformReadEntireFile, "assets/sprites/city.bmp");
-        gameState->hero = DEBUGLoadBMP(thread, memory->debugPlatformReadEntireFile, "assets/sprites/hero.bmp");
+        DEBUGPlatformReadEntireFile *fileReader = memory->debugPlatformReadEntireFile;
+
+        gameState->city = DEBUGLoadBMP(thread, fileReader, "assets/sprites/city.bmp");
+        gameState->hero = DEBUGLoadBMP(thread, fileReader, "assets/sprites/hero.bmp");
+
+        gameState->grassTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/grass.bmp");
+        gameState->dirtTexture  = DEBUGLoadBMP(thread, fileReader, "assets/textures/dirt.bmp");
+        gameState->lavaTexture  = DEBUGLoadBMP(thread, fileReader, "assets/textures/lava.bmp");
+        gameState->roughTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/rough.bmp");
+        gameState->sandTexture  = DEBUGLoadBMP(thread, fileReader, "assets/textures/sand.bmp");
+        gameState->snowTexture  = DEBUGLoadBMP(thread, fileReader, "assets/textures/snow.bmp");
+        gameState->swampTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/swamp.bmp");
+        gameState->waterTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/water.bmp");
+        // TODO change this to actual texture
+        gameState->rockTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/dirt.bmp");
 
         gameState->camera.zoom         = 150.0f;
         gameState->camera.zoomVelocity = 0.0f;
@@ -659,8 +676,9 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     V4 white           = {1.0f, 1.0f, 1.0f, 1.0f};
     real32 innerRadius = Sqrt(3) / 2.0f;
-    int32 xSpan        = CeilReal32ToInt32(buffer->width / (4 * innerRadius * camera->zoom)) + 2;
-    int32 ySpan        = buffer->height / 3;
+    // TODO better calculation for xSpan and ySpan
+    int32 xSpan = CeilReal32ToInt32(buffer->width / (4 * innerRadius * camera->zoom)) + 2;
+    int32 ySpan = buffer->height / 3;
     for (int32 relY = -ySpan; relY < ySpan; ++relY)
     {
         for (int32 relX = -xSpan; relX < xSpan; ++relX)
@@ -668,7 +686,10 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
             int32 x = cameraOffset.x + relX;
             int32 y = cameraOffset.y + relY;
 
-            Cell *cell = GetCell(gameState->world, OffsetCoord{x, y});
+            Cell *cell      = GetCell(gameState->world, OffsetCoord{x, y});
+            Bitmap *texture = &gameState->waterTexture;
+            V4 color        = {1.0, 1.0, 1.0, 1.0};
+
             if (cell)
             {
                 bool32 isHovering = mouseHexPos == cell->coord;
@@ -681,24 +702,24 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                 }
 #endif
 
-                V4 color = BiomeColor(cell->biome);
+                texture = BiomeTexture(gameState, cell->biome);
 
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
-                    color = Lerp(color, white, 0.2f);
+                    color = Lerp(color, white, 0.2);
                 }
                 else if (isHovering)
                 {
 #if HEX_MAGIC_INTERNAL
                     if (gameState->mode == EDIT && editor->brush == BRUSH_BIOME)
                     {
-                        color = BiomeColor(editor->brushBiome);
+                        texture = BiomeTexture(gameState, editor->brushBiome);
                     }
 #endif
-                    color = Lerp(color, white, 0.1f);
+                    color = Lerp(color, white, 0.1);
                 }
 
-                RendererDrawHex(renderer, camera->position, cell->position, color);
+                RendererPushHex(renderer, camera->position, cell->position, color, texture);
 
                 if (cell->resourceIndex)
                 {

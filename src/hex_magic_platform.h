@@ -97,7 +97,6 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile);
 struct GameOffscreenBuffer
 {
     void *memory;
-    int32 bytesPerPixel;
     int32 width;
     int32 height;
     int32 pitch;

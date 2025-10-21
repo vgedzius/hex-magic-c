@@ -45,6 +45,7 @@ struct RendererEntryHex
 
     V2 position;
     V4 color;
+    Bitmap *texture;
 };
 
 struct RendererEntryBitmap
@@ -53,7 +54,7 @@ struct RendererEntryBitmap
     RendererBasis basis;
 
     V2 position;
-    LoadedBitmap *bitmap;
+    Bitmap *bitmap;
 };
 
 struct Renderer
