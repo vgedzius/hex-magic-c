@@ -142,6 +142,32 @@ inline uint32 Pack(V4 value)
     return result;
 }
 
+inline BilinearSample SampleBilinear(Bitmap *texture, int32 x, int32 y)
+{
+    BilinearSample result;
+
+    uint8 *texelPtr = (uint8 *)texture->memory + y * texture->pitch + x * sizeof(uint32);
+
+    result.a = *(uint32 *)(texelPtr);
+    result.b = *(uint32 *)(texelPtr + sizeof(uint32));
+    result.c = *(uint32 *)(texelPtr + texture->pitch);
+    result.d = *(uint32 *)(texelPtr + texture->pitch + sizeof(uint32));
+
+    return result;
+}
+
+inline V4 BilinearBlend(BilinearSample sample, real32 fX, real32 fY)
+{
+    V4 texelA = Unpack(sample.a);
+    V4 texelB = Unpack(sample.b);
+    V4 texelC = Unpack(sample.c);
+    V4 texelD = Unpack(sample.d);
+
+    V4 result = Lerp(Lerp(texelA, texelB, fX), Lerp(texelC, texelD, fX), fY);
+
+    return result;
+}
+
 internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset, real32 scale, V4 color,
                       Bitmap *texture)
 {
@@ -190,7 +216,7 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
-                V2 uv = invTextureWorldSize * (v2(x, -y) + (textureOffset - screenCenter));
+                V2 uv = invTextureWorldSize * (Vector2(x, -y) + (textureOffset - screenCenter));
 
                 uv.x -= FloorReal32ToInt32(uv.x);
                 uv.y -= FloorReal32ToInt32(uv.y);
@@ -207,21 +233,12 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
                 real32 fX = tX - (real32)tXi;
                 real32 fY = tY - (real32)tYi;
 
-                uint8 *texelPtr = (uint8 *)texture->memory + tYi * texture->pitch + tXi * BITMAP_BYTES_PER_PIXEL;
-                uint32 source0  = *(uint32 *)(texelPtr);
-                uint32 source1  = *(uint32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
-                uint32 source2  = *(uint32 *)(texelPtr + texture->pitch);
-                uint32 source3  = *(uint32 *)(texelPtr + texture->pitch + BITMAP_BYTES_PER_PIXEL);
-
-                V4 texel0 = Unpack(source0);
-                V4 texel1 = Unpack(source1);
-                V4 texel2 = Unpack(source2);
-                V4 texel3 = Unpack(source3);
-
-                V4 texel = Lerp(Lerp(texel0, texel1, fX), Lerp(texel2, texel3, fX), fY);
+                BilinearSample source = SampleBilinear(texture, tYi, tXi);
+                V4 texel              = BilinearBlend(source, fX, fY);
 
                 if (color.a > 0.0)
                 {
+                    // TODO temp hack, should decide how we want to implement the tint
                     texel = Lerp(texel, color, color.a);
                 }
 
@@ -237,59 +254,126 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
     }
 }
 
-internal void DrawBitmap(GameOffscreenBuffer *buffer, Bitmap *bitmap, V2 position)
+internal void DrawBitmap(GameOffscreenBuffer *buffer, Bitmap *bitmap, V2 origin, V2 xAxis, V2 yAxis, V4 color)
 {
-    int32 minX = RoundReal32ToInt32(position.x);
-    int32 minY = RoundReal32ToInt32(position.y);
-    int32 maxX = minX + bitmap->width;
-    int32 maxY = minY + bitmap->height;
+    color.rgb *= color.a;
 
-    int32 sourceOffsetX = 0;
-    int32 sourceOffsetY = 0;
+    real32 invXAxisLengthSq = 1.0f / LengthSq(xAxis);
+    real32 invYAxisLengthSq = 1.0f / LengthSq(yAxis);
 
-    if (minX < 0)
+    int32 widthMax  = buffer->width - 1;
+    int32 heightMax = buffer->height - 1;
+
+    real32 invWidthMax  = 1.0f / (real32)widthMax;
+    real32 invHeightMax = 1.0f / (real32)heightMax;
+
+    int32 xMin = widthMax;
+    int32 xMax = 0;
+    int32 yMin = heightMax;
+    int32 yMax = 0;
+
+    V2 p[4] = {
+        origin,
+        origin + xAxis,
+        origin + xAxis + yAxis,
+        origin + yAxis,
+    };
+
+    for (uint32 pIndex = 0; pIndex < ArrayCount(p); ++pIndex)
     {
-        sourceOffsetX = -minX;
-        minX          = 0;
-    }
+        V2 testP     = p[pIndex];
+        int32 floorX = FloorReal32ToInt32(testP.x);
+        int32 ceilX  = CeilReal32ToInt32(testP.x);
+        int32 floorY = FloorReal32ToInt32(testP.y);
+        int32 ceilY  = CeilReal32ToInt32(testP.y);
 
-    if (minY < 0)
-    {
-        sourceOffsetY = -minY;
-        minY          = 0;
-    }
-
-    if (maxX > buffer->width)
-    {
-        maxX = buffer->width;
-    }
-
-    if (maxY > buffer->height)
-    {
-        maxY = buffer->height;
-    }
-
-    uint8 *sourceRow = (uint8 *)bitmap->memory + sourceOffsetY * bitmap->pitch + BITMAP_BYTES_PER_PIXEL * sourceOffsetX;
-    uint8 *destRow   = (uint8 *)buffer->memory + minX * BITMAP_BYTES_PER_PIXEL + minY * buffer->pitch;
-
-    for (int32 y = minY; y < maxY; ++y)
-    {
-        uint32 *dest   = (uint32 *)destRow;
-        uint32 *source = (uint32 *)sourceRow;
-
-        for (int32 x = minX; x < maxX; ++x)
+        if (xMin > floorX)
         {
-            V4 texel  = Unpack(*source);
-            V4 d      = Unpack(*dest);
-            V4 result = (1.0f - texel.a / 255.0f) * d + texel;
-            *dest     = Pack(result);
-
-            ++dest;
-            ++source;
+            xMin = floorX;
         }
 
-        destRow += buffer->pitch;
-        sourceRow += bitmap->pitch;
+        if (yMin > floorY)
+        {
+            yMin = floorY;
+        }
+
+        if (xMax < ceilX)
+        {
+            xMax = ceilX;
+        }
+
+        if (yMax < ceilY)
+        {
+            yMax = ceilY;
+        }
+    }
+
+    if (xMin < 0)
+    {
+        xMin = 0;
+    }
+
+    if (yMin < 0)
+    {
+        yMin = 0;
+    }
+
+    if (xMax > widthMax)
+    {
+        xMax = widthMax;
+    }
+
+    if (yMax > heightMax)
+    {
+        yMax = heightMax;
+    }
+
+    uint8 *row = (uint8 *)buffer->memory + xMin * BITMAP_BYTES_PER_PIXEL + yMin * buffer->pitch;
+    for (int32 y = yMin; y <= yMax; ++y)
+    {
+        uint32 *pixel = (uint32 *)row;
+        for (int32 x = xMin; x <= xMax; ++x)
+        {
+            V2 pixelP = Vector2(x, y);
+            V2 d      = pixelP - origin;
+
+            real32 edge0 = Inner(d, -Perp(xAxis));
+            real32 edge1 = Inner(d - xAxis, -Perp(yAxis));
+            real32 edge2 = Inner(d - xAxis - yAxis, Perp(xAxis));
+            real32 edge3 = Inner(d - yAxis, Perp(yAxis));
+
+            if (edge0 < 0.0f && edge1 < 0.0f && edge2 < 0.0f && edge3 < 0.0f)
+            {
+                V2 screenSpaceUV = {invWidthMax * x, invHeightMax * y};
+
+                real32 u = invXAxisLengthSq * Inner(d, xAxis);
+                real32 v = invYAxisLengthSq * Inner(d, yAxis);
+
+                real32 tX = u * (bitmap->width - 2);
+                real32 tY = v * (bitmap->height - 2);
+
+                int32 x = (int32)tX;
+                int32 y = (int32)tY;
+
+                real32 fX = tX - (real32)x;
+                real32 fY = tY - (real32)y;
+
+                Assert(x >= 0 && x < bitmap->width);
+                Assert(y >= 0 && y < bitmap->height);
+
+                BilinearSample texelSample = SampleBilinear(bitmap, x, y);
+                V4 texel                   = BilinearBlend(texelSample, fX, fY);
+
+                texel      = Hadamard(texel, color);
+                V4 dest    = Unpack(*pixel);
+                V4 blended = (1.0f - texel.a / 255.0f) * dest + texel;
+                *pixel     = Pack(blended);
+            }
+
+            ++pixel;
+        }
+
+        row += buffer->pitch;
     }
 }
 
@@ -354,10 +438,16 @@ internal void RenderToOutput(GameOffscreenBuffer *output, Renderer *renderer)
             case RENDERER_ENTRY_BITMAP:
             {
                 RendererEntryBitmap *render = (RendererEntryBitmap *)baseEntry;
-                V2 screenPosition           = PointToScreen(output, renderer, render->basis.position, render->position);
-                screenPosition -= 0.5f * V2{(real32)render->bitmap->width, (real32)render->bitmap->height};
+                Bitmap *bitmap              = render->bitmap;
+                V2 origin                   = PointToScreen(output, renderer, render->basis.position, render->position);
+                real32 scale                = renderer->scale / 150.0;
 
-                DrawBitmap(output, render->bitmap, screenPosition);
+                origin -= 0.5 * scale * Vector2(bitmap->width, bitmap->height);
+
+                V2 xAxis = scale * Vector2(bitmap->width, 0);
+                V2 yAxis = scale * Vector2(0, bitmap->height);
+
+                DrawBitmap(output, render->bitmap, origin, xAxis, yAxis, {1.0, 1.0, 1.0, 1.0});
 
                 baseAddress += sizeof(*render);
             }

@@ -23,6 +23,16 @@ union V3
     {
         real32 r, g, b;
     };
+    struct
+    {
+        V2 xy;
+        real32 ignored0_;
+    };
+    struct
+    {
+        real32 ignored1_;
+        V2 yz;
+    };
     real32 e[3];
 };
 
@@ -30,7 +40,15 @@ union V4
 {
     struct
     {
-        real32 x, y, z, w;
+        union
+        {
+            V3 xyz;
+            struct
+            {
+                real32 x, y, z;
+            };
+        };
+        real32 w;
     };
     struct
     {
@@ -47,9 +65,63 @@ union V4
     real32 e[4];
 };
 
-inline V2 v2(int32 x, int32 y)
+inline V2 Vector2(real32 x, real32 y)
 {
-    V2 result = {(real32)x, (real32)y};
+    V2 result;
+
+    result.x = x;
+    result.y = y;
+
+    return result;
+}
+
+inline V2 Vector2(int32 x, int32 y)
+{
+    V2 result = Vector2((real32)x, (real32)y);
+    return result;
+}
+
+inline V3 Vector3(real32 x, real32 y, real32 z)
+{
+    V3 result;
+
+    result.x = x;
+    result.y = y;
+    result.z = z;
+
+    return result;
+}
+
+inline V3 Vector3(V2 xy, real32 z)
+{
+    V3 result;
+
+    result.x = xy.x;
+    result.y = xy.y;
+    result.z = z;
+
+    return result;
+}
+
+inline V4 Vector4(real32 x, real32 y, real32 z, real32 w)
+{
+    V4 result;
+
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+
+    return result;
+}
+
+inline V4 Vector4(V3 xyz, real32 w)
+{
+    V4 result;
+
+    result.xyz = xyz;
+    result.w   = w;
+
     return result;
 }
 
@@ -84,6 +156,28 @@ inline int32 Min(int32 a, int32 b)
 inline int32 Max(int32 a, int32 b)
 {
     int32 result = a > b ? a : b;
+    return result;
+}
+
+inline real32 Clamp(real32 min, real32 value, real32 max)
+{
+    real32 result = value;
+
+    if (result < min)
+    {
+        result = min;
+    }
+    else if (result > max)
+    {
+        result = max;
+    }
+
+    return result;
+}
+
+inline real32 Clamp01(real32 value)
+{
+    real32 result = Clamp(0.0f, value, 1.0f);
     return result;
 }
 
@@ -167,6 +261,12 @@ inline real32 Inner(V2 a, V2 b)
 inline real32 LengthSq(V2 v)
 {
     real32 result = Inner(v, v);
+    return result;
+}
+
+inline V2 Perp(V2 v)
+{
+    V2 result = {-v.y, v.x};
     return result;
 }
 
@@ -254,6 +354,17 @@ inline real32 Inner(V3 a, V3 b)
 inline real32 LengthSq(V3 v)
 {
     real32 result = Inner(v, v);
+    return result;
+}
+
+inline V3 Clamp01(V3 value)
+{
+    V3 result;
+
+    result.x = Clamp01(value.x);
+    result.y = Clamp01(value.y);
+    result.z = Clamp01(value.z);
+
     return result;
 }
 

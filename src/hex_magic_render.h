@@ -4,6 +4,11 @@
 #include "hex_magic_platform.h"
 #include "hex_magic_math.h"
 
+struct BilinearSample
+{
+    uint32 a, b, c, d;
+};
+
 enum RendererEntryType
 {
     RENDERER_ENTRY_CLEAR,
