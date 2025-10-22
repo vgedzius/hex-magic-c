@@ -220,6 +220,11 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
 
                 V4 texel = Lerp(Lerp(texel0, texel1, fX), Lerp(texel2, texel3, fX), fY);
 
+                if (color.a > 0.0)
+                {
+                    texel = Lerp(texel, color, color.a);
+                }
+
                 V4 d      = Unpack(*dest);
                 V4 result = (1.0f - texel.a / 255.0f) * d + texel;
                 *dest     = Pack(result);

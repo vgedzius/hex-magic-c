@@ -686,7 +686,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
             Cell *cell      = GetCell(gameState->world, OffsetCoord{x, y});
             Bitmap *texture = &gameState->waterTexture;
-            V4 color        = {1.0, 1.0, 1.0, 1.0};
+            V4 color        = {1.0, 1.0, 1.0, 0.0};
 
             if (cell)
             {
@@ -704,7 +704,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
                 if (world->selectedCell && world->selectedCell->coord == cell->coord)
                 {
-                    color = Lerp(color, white, 0.2);
+                    color.a = 0.2;
                 }
                 else if (isHovering)
                 {
@@ -714,7 +714,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                         texture = BiomeTexture(gameState, editor->brushBiome);
                     }
 #endif
-                    color = Lerp(color, white, 0.1);
+                    color.a = 0.1;
                 }
 
                 RendererPushHex(renderer, camera->position, cell->position, color, texture);

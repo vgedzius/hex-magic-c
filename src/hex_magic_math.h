@@ -348,5 +348,11 @@ inline real32 LengthSq(V4 v)
     return result;
 }
 
+inline V4 Hadamard(V4 a, V4 b)
+{
+    V4 result = {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+    return result;
+}
+
 #define HEX_MAGIC_MATH
 #endif
