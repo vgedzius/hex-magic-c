@@ -175,7 +175,7 @@ internal Cell *GetCell(World *world, HexCoord coord)
 
 internal Bitmap *BiomeTexture(GameState *state, Biome biome)
 {
-    Bitmap *result;
+    Bitmap *result = 0;
 
     switch (biome)
     {

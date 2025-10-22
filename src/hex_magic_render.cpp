@@ -195,16 +195,31 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
                 uv.x -= FloorReal32ToInt32(uv.x);
                 uv.y -= FloorReal32ToInt32(uv.y);
 
-                int32 tX = (int32)(uv.x * (texture->width - 1));
-                int32 tY = (int32)(uv.y * (texture->height - 1));
+                real32 tX = uv.x * (texture->width - 1);
+                real32 tY = uv.y * (texture->height - 1);
 
                 Assert(tX >= 0 && tX < texture->width);
                 Assert(tY >= 0 && tY < texture->height);
 
-                uint8 *texelPtr = (uint8 *)texture->memory + tY * texture->pitch + tX * BITMAP_BYTES_PER_PIXEL;
-                uint32 source   = *(uint32 *)(texelPtr);
+                int32 tXi = (int32)tX;
+                int32 tYi = (int32)tY;
 
-                V4 texel  = Unpack(source);
+                real32 fX = tX - (real32)tXi;
+                real32 fY = tY - (real32)tYi;
+
+                uint8 *texelPtr = (uint8 *)texture->memory + tYi * texture->pitch + tXi * BITMAP_BYTES_PER_PIXEL;
+                uint32 source0  = *(uint32 *)(texelPtr);
+                uint32 source1  = *(uint32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
+                uint32 source2  = *(uint32 *)(texelPtr + texture->pitch);
+                uint32 source3  = *(uint32 *)(texelPtr + texture->pitch + BITMAP_BYTES_PER_PIXEL);
+
+                V4 texel0 = Unpack(source0);
+                V4 texel1 = Unpack(source1);
+                V4 texel2 = Unpack(source2);
+                V4 texel3 = Unpack(source3);
+
+                V4 texel = Lerp(Lerp(texel0, texel1, fX), Lerp(texel2, texel3, fX), fY);
+
                 V4 d      = Unpack(*dest);
                 V4 result = (1.0f - texel.a / 255.0f) * d + texel;
                 *dest     = Pack(result);
