@@ -145,7 +145,8 @@ inline uint32 Pack(V4 value)
 internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset, real32 scale, V4 color,
                       Bitmap *texture)
 {
-    real32 sqrt3 = Sqrt(3);
+    V2 screenCenter = {0.5f * buffer->width, -0.5f * buffer->height};
+    real32 sqrt3    = Sqrt(3);
 
     int32 minX = RoundReal32ToInt32(screenP.x - sqrt3 / 2.0f * scale);
     int32 maxX = RoundReal32ToInt32(screenP.x + sqrt3 / 2.0f * scale);
@@ -189,7 +190,7 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
-                V2 uv = invTextureWorldSize * (v2(x, -y) + textureOffset);
+                V2 uv = invTextureWorldSize * (v2(x, -y) + (textureOffset - screenCenter));
 
                 uv.x -= FloorReal32ToInt32(uv.x);
                 uv.y -= FloorReal32ToInt32(uv.y);

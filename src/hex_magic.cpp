@@ -516,7 +516,6 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
 
     Camera *camera = &gameState->camera;
 
-#if 0
     real32 ddCameraZoom = input->mouse.wheel;
     if (input->mouse.wheel > 0 && camera->zoom < camera->maxZoom)
     {
@@ -542,7 +541,6 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     {
         camera->zoom = camera->maxZoom;
     }
-#endif
 
     if (IsHeld(keyboard->moveDown) || mouse->y > buffer->height - mouseControlZone)
     {
