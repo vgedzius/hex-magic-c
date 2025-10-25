@@ -1,7 +1,39 @@
 #include "hex_magic.h"
 #include "hex_magic_intrinsics.h"
+#include "hex_magic_math.h"
 #include "hex_magic_platform.h"
 #include "hex_magic_render.h"
+
+inline V2 ScreenToWorld(GameOffscreenBuffer *buffer, Renderer *renderer, int32 x, int32 y)
+{
+    Camera *camera  = renderer->camera;
+    V2 screenCenter = 0.5f * Vector2(buffer->width, buffer->height);
+
+    V2 result = Vector2(x, buffer->height - y);
+
+    result -= screenCenter;
+    result *= 1.0f / camera->zoom;
+    result += camera->position;
+
+    return result;
+}
+
+inline V2 WorldToScreen(GameOffscreenBuffer *buffer, Renderer *renderer, V2 point)
+{
+    Camera *camera  = renderer->camera;
+    V2 screenCenter = 0.5f * Vector2(buffer->width, buffer->height);
+
+    V2 result = point - camera->position;
+
+    // TODO should use proper perspecive calculations here for proper zoom and scaling
+    // (1.0f / distanceToCamera) * focalLenght * worldPosition
+
+    result *= camera->zoom;
+    result += screenCenter;
+    result.y = buffer->height - result.y;
+
+    return result;
+}
 
 #define PushRenderElement(renderer, element, type) (element *)PushRenderElement_(renderer, sizeof(element), type)
 inline RendererEntryHeader *PushRenderElement_(Renderer *renderer, MemoryIndex size, RendererEntryType type)
@@ -19,14 +51,14 @@ inline RendererEntryHeader *PushRenderElement_(Renderer *renderer, MemoryIndex s
     return result;
 }
 
-internal Renderer *MakeRenderer(MemoryArena *arena, MemoryIndex maxPushBufferSize, real32 scale)
+internal Renderer *MakeRenderer(MemoryArena *arena, MemoryIndex maxPushBufferSize, Camera *camera)
 {
     Renderer *renderer = PushStruct(arena, Renderer);
 
     renderer->maxPushBufferSize = maxPushBufferSize;
     renderer->pushBufferSize    = 0;
     renderer->pushBufferBase    = (uint8 *)PushSize(arena, maxPushBufferSize);
-    renderer->scale             = scale;
+    renderer->camera            = camera;
 
     return renderer;
 }
@@ -41,41 +73,38 @@ internal void RendererClear(Renderer *renderer, V4 color)
     }
 }
 
-internal void RendererPushRectangle(Renderer *renderer, V2 basePosition, V2 position, V2 dimensions, V4 color)
+internal void RendererPushRectangle(Renderer *renderer, V2 position, V2 dimensions, V4 color)
 {
     RendererEntryRectangle *entry = PushRenderElement(renderer, RendererEntryRectangle, RENDERER_ENTRY_RECTANGLE);
 
     if (entry)
     {
-        entry->basis.position = basePosition;
-        entry->position       = position;
-        entry->dimensions     = dimensions;
-        entry->color          = color;
+        entry->position   = position;
+        entry->dimensions = dimensions;
+        entry->color      = color;
     }
 }
 
-internal void RendererPushHex(Renderer *renderer, V2 basePosition, V2 position, V4 color, Bitmap *texture)
+internal void RendererPushHex(Renderer *renderer, V2 position, V4 color, Bitmap *texture)
 {
     RendererEntryHex *entry = PushRenderElement(renderer, RendererEntryHex, RENDERER_ENTRY_HEX);
 
     if (entry)
     {
-        entry->basis.position = basePosition;
-        entry->position       = position;
-        entry->color          = color;
-        entry->texture        = texture;
+        entry->position = position;
+        entry->color    = color;
+        entry->texture  = texture;
     }
 }
 
-internal void RendererPushBitmap(Renderer *renderer, V2 basePosition, V2 position, Bitmap *bitmap)
+internal void RendererPushBitmap(Renderer *renderer, V2 position, Bitmap *bitmap)
 {
     RendererEntryBitmap *entry = PushRenderElement(renderer, RendererEntryBitmap, RENDERER_ENTRY_BITMAP);
 
     if (entry)
     {
-        entry->basis.position = basePosition;
-        entry->position       = position;
-        entry->bitmap         = bitmap;
+        entry->position = position;
+        entry->bitmap   = bitmap;
     }
 }
 
@@ -168,16 +197,18 @@ inline V4 BilinearBlend(BilinearSample sample, real32 fX, real32 fY)
     return result;
 }
 
-internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset, real32 scale, V4 color,
-                      Bitmap *texture)
+internal void DrawHex(GameOffscreenBuffer *buffer, Renderer *renderer, V2 worldPosition, V4 color, Bitmap *texture)
 {
-    V2 screenCenter = {0.5f * buffer->width, -0.5f * buffer->height};
-    real32 sqrt3    = Sqrt(3);
+    real32 sqrt3      = Sqrt(3);
+    Camera *camera    = renderer->camera;
+    real32 scale      = camera->zoom;
+    V2 screenCenter   = {0.5f * buffer->width, 0.5f * buffer->height};
+    V2 screenPosition = WorldToScreen(buffer, renderer, worldPosition);
 
-    int32 minX = RoundReal32ToInt32(screenP.x - sqrt3 / 2.0f * scale);
-    int32 maxX = RoundReal32ToInt32(screenP.x + sqrt3 / 2.0f * scale);
-    int32 minY = RoundReal32ToInt32(screenP.y - scale);
-    int32 maxY = RoundReal32ToInt32(screenP.y + scale);
+    int32 minX = RoundReal32ToInt32(screenPosition.x - sqrt3 / 2.0f * scale);
+    int32 maxX = RoundReal32ToInt32(screenPosition.x + sqrt3 / 2.0f * scale);
+    int32 minY = RoundReal32ToInt32(screenPosition.y - scale);
+    int32 maxY = RoundReal32ToInt32(screenPosition.y + scale);
 
     if (minX < 0)
     {
@@ -202,7 +233,7 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
     real32 v = 0.5 * scale;
     real32 h = 0.5 * sqrt3 * scale;
 
-    real32 invTextureWorldSize = 1.0 / (2.0 * scale);
+    real32 invTextureWorldSize = 0.5;
 
     uint8 *destRow = (uint8 *)buffer->memory + minX * BITMAP_BYTES_PER_PIXEL + minY * buffer->pitch;
     for (int32 y = minY; y < maxY; ++y)
@@ -211,12 +242,13 @@ internal void DrawHex(GameOffscreenBuffer *buffer, V2 screenP, V2 textureOffset,
 
         for (int32 x = minX; x < maxX; ++x)
         {
-            real32 q2x = Abs(x - screenP.x);
-            real32 q2y = Abs(y - screenP.y);
+            real32 q2x = Abs(x - screenPosition.x);
+            real32 q2y = Abs(y - screenPosition.y);
 
             if (2 * v * h - v * q2x - h * q2y >= 0)
             {
-                V2 uv = invTextureWorldSize * (Vector2(x, -y) + (textureOffset - screenCenter));
+                V2 pixelWorldP = ScreenToWorld(buffer, renderer, x, y);
+                V2 uv          = invTextureWorldSize * Vector2(-pixelWorldP.y, pixelWorldP.x);
 
                 uv.x -= FloorReal32ToInt32(uv.x);
                 uv.y -= FloorReal32ToInt32(uv.y);
@@ -377,18 +409,6 @@ internal void DrawBitmap(GameOffscreenBuffer *buffer, Bitmap *bitmap, V2 origin,
     }
 }
 
-internal V2 PointToScreen(GameOffscreenBuffer *buffer, Renderer *renderer, V2 basePosition, V2 point)
-{
-    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
-    V2 result       = point - basePosition;
-
-    result *= renderer->scale;
-    result += screenCenter;
-    result.y = buffer->height - result.y;
-
-    return result;
-}
-
 internal void RenderToOutput(GameOffscreenBuffer *output, Renderer *renderer)
 {
     for (uint32 baseAddress = 0; baseAddress < renderer->pushBufferSize;)
@@ -409,13 +429,14 @@ internal void RenderToOutput(GameOffscreenBuffer *output, Renderer *renderer)
             case RENDERER_ENTRY_RECTANGLE:
             {
                 RendererEntryRectangle *render = (RendererEntryRectangle *)baseEntry;
-                V2 screenPosition = PointToScreen(output, renderer, render->basis.position, render->position);
+                Camera *camera                 = renderer->camera;
+                V2 screenPosition              = WorldToScreen(output, renderer, render->position);
 
-                V2 min = {screenPosition.x - render->dimensions.x * 0.5f * renderer->scale,
-                          screenPosition.y - render->dimensions.y * 0.5f * renderer->scale};
+                V2 min = {screenPosition.x - render->dimensions.x * 0.5f * camera->zoom,
+                          screenPosition.y - render->dimensions.y * 0.5f * camera->zoom};
 
-                V2 max = {screenPosition.x + render->dimensions.x * 0.5f * renderer->scale,
-                          screenPosition.y + render->dimensions.y * 0.5f * renderer->scale};
+                V2 max = {screenPosition.x + render->dimensions.x * 0.5f * camera->zoom,
+                          screenPosition.y + render->dimensions.y * 0.5f * camera->zoom};
 
                 DrawRectangle(output, min, max, render->color);
 
@@ -426,10 +447,8 @@ internal void RenderToOutput(GameOffscreenBuffer *output, Renderer *renderer)
             case RENDERER_ENTRY_HEX:
             {
                 RendererEntryHex *render = (RendererEntryHex *)baseEntry;
-                V2 screenPosition        = PointToScreen(output, renderer, render->basis.position, render->position);
 
-                DrawHex(output, screenPosition, renderer->scale * render->basis.position, renderer->scale,
-                        render->color, render->texture);
+                DrawHex(output, renderer, render->position, render->color, render->texture);
 
                 baseAddress += sizeof(*render);
             }
@@ -439,8 +458,9 @@ internal void RenderToOutput(GameOffscreenBuffer *output, Renderer *renderer)
             {
                 RendererEntryBitmap *render = (RendererEntryBitmap *)baseEntry;
                 Bitmap *bitmap              = render->bitmap;
-                V2 origin                   = PointToScreen(output, renderer, render->basis.position, render->position);
-                real32 scale                = renderer->scale / 150.0;
+                Camera *camera              = renderer->camera;
+                V2 origin                   = WorldToScreen(output, renderer, render->position);
+                real32 scale                = camera->zoom / 150.0;
 
                 origin -= 0.5 * scale * Vector2(bitmap->width, bitmap->height);
 

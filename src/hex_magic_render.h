@@ -17,11 +17,6 @@ enum RendererEntryType
     RENDERER_ENTRY_BITMAP,
 };
 
-struct RendererBasis
-{
-    V2 position;
-};
-
 struct RendererEntryHeader
 {
     RendererEntryType type;
@@ -36,7 +31,6 @@ struct RendererEntryClear
 struct RendererEntryRectangle
 {
     RendererEntryHeader header;
-    RendererBasis basis;
 
     V2 position;
     V2 dimensions;
@@ -46,7 +40,6 @@ struct RendererEntryRectangle
 struct RendererEntryHex
 {
     RendererEntryHeader header;
-    RendererBasis basis;
 
     V2 position;
     V4 color;
@@ -56,7 +49,6 @@ struct RendererEntryHex
 struct RendererEntryBitmap
 {
     RendererEntryHeader header;
-    RendererBasis basis;
 
     V2 position;
     Bitmap *bitmap;
@@ -64,7 +56,7 @@ struct RendererEntryBitmap
 
 struct Renderer
 {
-    real32 scale;
+    Camera *camera;
 
     MemoryIndex maxPushBufferSize;
     MemoryIndex pushBufferSize;

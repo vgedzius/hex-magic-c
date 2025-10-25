@@ -120,37 +120,22 @@ internal uint32 AddResource(World *world, V2 position)
     return index;
 }
 
-internal V2 ScreenToWorld(GameOffscreenBuffer *buffer, Camera *camera, uint32 x, uint32 y)
-{
-    V2 result;
-    V2 screenCenter = {0.5f * (real32)buffer->width, 0.5f * (real32)buffer->height};
-
-    result.x = (real32)x;
-    result.y = (real32)buffer->height - (real32)y;
-
-    result -= screenCenter;
-    result *= 1.0f / camera->zoom;
-    result += camera->position;
-
-    return result;
-}
-
-internal void DrawResource(Renderer *renderer, Camera *camera, V2 position)
+internal void DrawResource(Renderer *renderer, V2 position)
 {
     V2 dimensions = {1.25f, 1.25f};
     V4 color      = {0.5f, 0.0f, 0.5f, 1.0f};
 
-    RendererPushRectangle(renderer, camera->position, position, dimensions, color);
+    RendererPushRectangle(renderer, position, dimensions, color);
 }
 
 internal void DrawCity(GameState *state, Renderer *renderer, Camera *camera, V2 position)
 {
-    RendererPushBitmap(renderer, camera->position, position, &state->city);
+    RendererPushBitmap(renderer, position, &state->city);
 }
 
 internal void DrawHero(GameState *state, Renderer *renderer, Camera *camera, V2 position)
 {
-    RendererPushBitmap(renderer, camera->position, position, &state->hero);
+    RendererPushBitmap(renderer, position, &state->hero);
 }
 
 internal Cell *GetCell(World *world, OffsetCoord coord)
@@ -373,8 +358,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
         gameState->snowTexture  = DEBUGLoadBMP(thread, fileReader, "assets/textures/snow.bmp");
         gameState->swampTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/swamp.bmp");
         gameState->waterTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/water.bmp");
-        // TODO change this to actual texture
-        gameState->rockTexture = DEBUGLoadBMP(thread, fileReader, "assets/textures/dirt.bmp");
+        gameState->rockTexture  = DEBUGLoadBMP(thread, fileReader, "assets/textures/rock.bmp");
 
         gameState->camera.zoom         = 150.0f;
         gameState->camera.zoomVelocity = 0.0f;
@@ -576,7 +560,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     camera->velocity = ddCamera * input->dtForFrame + camera->velocity;
 
     TemporaryMemory renderMemory = StartTemporaryMemory(&transientState->transientArena);
-    Renderer *renderer           = MakeRenderer(&transientState->transientArena, Megabytes(4), camera->zoom);
+    Renderer *renderer           = MakeRenderer(&transientState->transientArena, Megabytes(4), camera);
 
     V4 bgColor = {0.392f, 0.584f, 0.929f, 1.0f};
 #if HEX_MAGIC_INTERNAL
@@ -591,7 +575,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
     HexCoord cameraHexPos    = V2ToHex(camera->position);
     OffsetCoord cameraOffset = OffsetFromHex(cameraHexPos);
 
-    V2 mouseWorldPos     = ScreenToWorld(buffer, camera, mouse->x, mouse->y);
+    V2 mouseWorldPos     = ScreenToWorld(buffer, renderer, mouse->x, mouse->y);
     HexCoord mouseHexPos = V2ToHex(mouseWorldPos);
 
     if (WasPressed(mouse->lButton))
@@ -717,11 +701,11 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                     color.a = 0.1;
                 }
 
-                RendererPushHex(renderer, camera->position, cell->position, color, texture);
+                RendererPushHex(renderer, cell->position, color, texture);
 
                 if (cell->resourceIndex)
                 {
-                    DrawResource(renderer, camera, cell->position);
+                    DrawResource(renderer, cell->position);
                 }
 
                 if (cell->cityIndex)
@@ -741,7 +725,7 @@ extern "C" GAME_UPDATE_AND_RENDER(gameUpdateAndRender)
                     {
                         case ENTITY_RESOURCE:
                         {
-                            DrawResource(renderer, camera, cell->position);
+                            DrawResource(renderer, cell->position);
                         }
                         break;
 
